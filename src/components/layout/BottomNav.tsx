@@ -101,10 +101,29 @@ function IconApproval({ active }: { active: boolean }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function IconMoney({ active }: { active: boolean }) {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill={active ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+      <path d="M12 18V6" />
     </svg>
   );
 }
@@ -164,9 +183,9 @@ const MANAGER_TABS: Tab[] = [
     icon: (a) => <IconCalendar active={a} />,
   },
   {
-    href: "/checklist",
-    label: "Checklist",
-    icon: (a) => <IconChecklist active={a} />,
+    href: "/finance/tip-pool",
+    label: "Tip",
+    icon: (a) => <IconMoney active={a} />,
   },
   {
     href: "/admin/approval",
