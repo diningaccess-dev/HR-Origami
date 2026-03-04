@@ -1,32 +1,52 @@
 "use client";
 
-// Đăng ký service worker + xóa cache cũ để tránh hydration mismatch
+// Đăng ký service worker + hủy các SW cũ để tránh hydration mismatch
 import { useEffect } from "react";
+
+// Phiên bản app — tăng lên mỗi khi cần invalidate cache
+const APP_VERSION = "v5";
 
 export default function ServiceWorkerRegistrar() {
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
-    // Bước 1: Xóa TẤT CẢ cache cũ ngay lập tức
-    if ("caches" in window) {
-      caches.keys().then((keys) => {
-        keys.forEach((k) => caches.delete(k));
+    const run = async () => {
+      // Bước 1: Hủy TOÀN BỘ SW cũ (kể cả SW đang HTML cache)
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      const oldSWs = registrations.filter((r) => {
+        // Chỉ giữ lại nếu SW đang active và là phiên bản mới
+        const sw = r.active;
+        return !(sw && sw.scriptURL.includes("/sw.js") &&
+          sessionStorage.getItem("sw_version") === APP_VERSION);
       });
-    }
 
-    // Bước 2: Đăng ký SW mới + force update
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .register("/sw.js", { updateViaCache: "none" })
-        .then((reg) => {
-          console.log("[SW] Đăng ký thành công, scope:", reg.scope);
-          // Force check update mỗi lần load
-          reg.update().catch(() => {});
-        })
-        .catch((err) => {
-          console.warn("[SW] Đăng ký thất bại:", err);
+      if (oldSWs.length > 0) {
+        await Promise.all(oldSWs.map((r) => r.unregister()));
+        // Xóa toàn bộ cache cũ
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+        // Đánh dấu version đã xử lý + reload trang để lấy HTML mới
+        sessionStorage.setItem("sw_version", APP_VERSION);
+        window.location.reload();
+        return;
+      }
+
+      // Bước 2: Đăng ký SW mới
+      try {
+        const reg = await navigator.serviceWorker.register("/sw.js", {
+          updateViaCache: "none",
         });
-    }
+        sessionStorage.setItem("sw_version", APP_VERSION);
+        console.log("[SW] Đăng ký thành công, scope:", reg.scope);
+        reg.update().catch(() => {});
+      } catch (err) {
+        console.warn("[SW] Đăng ký thất bại:", err);
+      }
+    };
+
+    run();
   }, []);
 
   return null;

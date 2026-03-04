@@ -1,8 +1,8 @@
-// public/sw.js v4 — Minimal Service Worker
-// Chi cache push notifications, KHONG cache bat ky request nao
-// Tranh hydration mismatch va clone errors hoan toan
+// public/sw.js v5 — Minimal Service Worker
+// Không cache bất kỳ request nào — chỉ xử lý push notifications
+// Tự xóa cache + claim ngay khi activate
 
-const CACHE_NAME = "enso-hr-v4";
+const CACHE_NAME = "enso-hr-v5";
 
 // Install — xoa cache cu, khong pre-cache gi ca
 self.addEventListener("install", () => self.skipWaiting());
