@@ -146,6 +146,23 @@ function IconProfile({ active }: { active: boolean }) {
   );
 }
 
+function IconChat({ active }: { active: boolean }) {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill={active ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
 // ── Staff/Azubi tabs ─────────────────────────────────────────
 const STAFF_TABS: Tab[] = [
   {
@@ -162,6 +179,11 @@ const STAFF_TABS: Tab[] = [
     href: "/checkin",
     label: "Check-in",
     icon: (a) => <IconCheckin active={a} />,
+  },
+  {
+    href: "/chat",
+    label: "Chat",
+    icon: (a) => <IconChat active={a} />,
   },
   {
     href: "/hr",
@@ -183,9 +205,9 @@ const MANAGER_TABS: Tab[] = [
     icon: (a) => <IconCalendar active={a} />,
   },
   {
-    href: "/finance/tip-pool",
-    label: "Tip",
-    icon: (a) => <IconMoney active={a} />,
+    href: "/chat",
+    label: "Chat",
+    icon: (a) => <IconChat active={a} />,
   },
   {
     href: "/admin/approval",
