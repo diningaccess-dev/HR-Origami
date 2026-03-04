@@ -11,29 +11,24 @@ export default function ServiceWorkerRegistrar() {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
     const run = async () => {
-      // Bước 1: Hủy TOÀN BỘ SW cũ (kể cả SW đang HTML cache)
+      // Bước 1: Hủy TOÀN BỘ SW cũ + xóa cache
       const registrations = await navigator.serviceWorker.getRegistrations();
-      const oldSWs = registrations.filter((r) => {
-        // Chỉ giữ lại nếu SW đang active và là phiên bản mới
-        const sw = r.active;
-        return !(sw && sw.scriptURL.includes("/sw.js") &&
-          sessionStorage.getItem("sw_version") === APP_VERSION);
-      });
+      const needsCleanup =
+        registrations.length > 0 &&
+        sessionStorage.getItem("sw_version") !== APP_VERSION;
 
-      if (oldSWs.length > 0) {
-        await Promise.all(oldSWs.map((r) => r.unregister()));
-        // Xóa toàn bộ cache cũ
+      if (needsCleanup) {
+        await Promise.all(registrations.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
           await Promise.all(keys.map((k) => caches.delete(k)));
         }
-        // Đánh dấu version đã xử lý + reload trang để lấy HTML mới
         sessionStorage.setItem("sw_version", APP_VERSION);
         window.location.reload();
         return;
       }
 
-      // Bước 2: Đăng ký SW mới
+      // Bước 2: Đăng ký SW mới (no-cache)
       try {
         const reg = await navigator.serviceWorker.register("/sw.js", {
           updateViaCache: "none",

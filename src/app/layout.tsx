@@ -47,6 +47,31 @@ export default function RootLayout({
       <head>
         {/* PWA — Apple touch icon */}
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        {/* Tự động reload khi chunk JS bị 404 (deployment mới, cache cũ) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var _reloading = false;
+                window.addEventListener('error', function(e) {
+                  var el = e.target;
+                  if (!_reloading && el && el.tagName === 'SCRIPT' && el.src && el.src.indexOf('/_next/static/') !== -1) {
+                    _reloading = true;
+                    if ('caches' in window) {
+                      caches.keys().then(function(keys) {
+                        Promise.all(keys.map(function(k) { return caches.delete(k); })).then(function() {
+                          window.location.reload();
+                        });
+                      });
+                    } else {
+                      window.location.reload();
+                    }
+                  }
+                }, true);
+              })();
+            `,
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
