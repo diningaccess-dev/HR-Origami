@@ -1,326 +1,174 @@
-"use client";
+﻿"use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { useEffect, useState } from "react";
+import {
+  Home,
+  Calendar,
+  BookOpen,
+  ClipboardList,
+  CircleDollarSign,
+  UserCheck,
+  User,
+} from "lucide-react";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 );
 
-// ── Tab definitions ──────────────────────────────────────────
-type Tab = {
-  href: string;
+// -- Types
+type TabItem = {
+  key: string;
   label: string;
-  icon: (active: boolean) => React.ReactNode;
+  href: string;
+  icon: React.ElementType;
+  badge?: number;
 };
 
-// Lucide-style SVG icons inline (tránh thêm package)
-function IconHome({ active }: { active: boolean }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill={active ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
-      <path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-    </svg>
-  );
-}
-
-function IconCalendar({ active }: { active: boolean }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill={active ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M8 2v4" />
-      <path d="M16 2v4" />
-      <rect width="18" height="18" x="3" y="4" rx="2" />
-      <path d="M3 10h18" />
-    </svg>
-  );
-}
-
-function IconChecklist({ active }: { active: boolean }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={active ? "2.5" : "2"}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M11 18H3" />
-      <path d="M11 12H3" />
-      <path d="M11 6H3" />
-      <path d="m15 18 2 2 4-4" />
-      <path d="m15 12 2 2 4-4" />
-      <path d="m15 6 2 2 4-4" />
-    </svg>
-  );
-}
-
-function IconApproval({ active }: { active: boolean }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill={active ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
-
-function IconMoney({ active }: { active: boolean }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill={active ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
-      <path d="M12 18V6" />
-    </svg>
-  );
-}
-
-function IconProfile({ active }: { active: boolean }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill={active ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="8" r="5" />
-      <path d="M20 21a8 8 0 0 0-16 0" />
-    </svg>
-  );
-}
-
-function IconBook({ active }: { active: boolean }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill={active ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-    </svg>
-  );
-}
-
-function IconChat({ active }: { active: boolean }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill={active ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-
-// ── Staff/Azubi tabs ─────────────────────────────────────────
-const STAFF_TABS: Tab[] = [
-  {
-    href: "/home",
-    label: "Home",
-    icon: (a) => <IconHome active={a} />,
-  },
-  {
-    href: "/schedule",
-    label: "Lịch",
-    icon: (a) => <IconCalendar active={a} />,
-  },
-  {
-    href: "/studyhub",
-    label: "Học",
-    icon: (a) => <IconBook active={a} />,
-  },
-  {
-    href: "/chat",
-    label: "Chat",
-    icon: (a) => <IconChat active={a} />,
-  },
-  {
-    href: "/hr",
-    label: "Hồ sơ",
-    icon: (a) => <IconProfile active={a} />,
-  },
+// -- Base tabs (mọi role đều thấy)
+const BASE: Omit<TabItem, "badge">[] = [
+  { key: "home",     label: "Home",  href: "/home",     icon: Home },
+  { key: "schedule", label: "Lịch",  href: "/schedule", icon: Calendar },
+  { key: "hr",       label: "Hồ sơ", href: "/hr",       icon: User },
 ];
 
-// ── Manager/Owner tabs ───────────────────────────────────────
-const MANAGER_TABS: Tab[] = [
-  {
-    href: "/home",
-    label: "Home",
-    icon: (a) => <IconHome active={a} />,
-  },
-  {
-    href: "/schedule",
-    label: "Lịch",
-    icon: (a) => <IconCalendar active={a} />,
-  },
-  {
-    href: "/studyhub",
-    label: "Học",
-    icon: (a) => <IconBook active={a} />,
-  },
-  {
-    href: "/checklist",
-    label: "Checklist",
-    icon: (a) => <IconChecklist active={a} />,
-  },
-  {
-    href: "/finance/tip-pool",
-    label: "Tip",
-    icon: (a) => <IconMoney active={a} />,
-  },
-  {
-    href: "/admin/approval",
-    label: "Duyệt",
-    icon: (a) => <IconApproval active={a} />,
-  },
-  {
-    href: "/hr",
-    label: "Hồ sơ",
-    icon: (a) => <IconProfile active={a} />,
-  },
-];
+// -- Build tabs theo role
+function buildTabs(role: string, pendingCount: number, studyhubBadge: number): TabItem[] {
+  const extraByRole: Record<string, TabItem[]> = {
+    azubi: [
+      { key: "studyhub",  label: "Học",       href: "/studyhub",         icon: BookOpen,         badge: studyhubBadge || undefined },
+      { key: "checklist", label: "Checklist", href: "/checklist",        icon: ClipboardList },
+    ],
+    staff: [
+      { key: "checklist", label: "Checklist", href: "/checklist",        icon: ClipboardList },
+      { key: "tip",       label: "Tip",        href: "/finance/tip-pool", icon: CircleDollarSign },
+    ],
+    manager: [
+      { key: "checklist", label: "Checklist", href: "/checklist",        icon: ClipboardList },
+      { key: "tip",       label: "Tip",        href: "/finance/tip-pool", icon: CircleDollarSign },
+      { key: "approval",  label: "Duyệt",      href: "/admin/approval",   icon: UserCheck, badge: pendingCount || undefined },
+    ],
+    owner: [
+      { key: "checklist", label: "Checklist", href: "/checklist",        icon: ClipboardList },
+      { key: "tip",       label: "Tip",        href: "/finance/tip-pool", icon: CircleDollarSign },
+      { key: "approval",  label: "Duyệt",      href: "/admin/approval",   icon: UserCheck, badge: pendingCount || undefined },
+    ],
+  };
+  const extra = extraByRole[role] ?? [];
+  return [BASE[0], BASE[1], ...extra, BASE[2]];
+}
 
-// ── Component ────────────────────────────────────────────────
+// -- Component
 type BottomNavProps = {
   role: string;
   locationId: string;
 };
 
-export default function BottomNav({ role }: BottomNavProps) {
+export default function BottomNav({ role, locationId }: BottomNavProps) {
   const pathname = usePathname();
-  const brandColor = "var(--brand-color)";
-  const [requiredBadge, setRequiredBadge] = useState(0);
+  const router = useRouter();
 
-  // Fetch số khóa bắt buộc chưa hoàn thành → hiện badge đỏ
+  const [studyhubBadge, setStudyhubBadge] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const isManagerOrOwner = role === "manager" || role === "owner";
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || cancelled) return;
-
-        // Lấy tất cả khóa bắt buộc đã published
         const { data: requiredCourses } = await supabase
           .from("courses")
           .select("id")
           .eq("is_required", true)
           .not("published_at", "is", null);
-
-        if (!requiredCourses || requiredCourses.length === 0 || cancelled) return;
-
+        if (!requiredCourses?.length || cancelled) return;
         const courseIds = requiredCourses.map((c) => c.id);
-
-        // Lấy enrollment đã hoàn thành của user
         const { data: completed } = await supabase
           .from("course_enrollments")
           .select("course_id")
           .eq("profile_id", user.id)
           .not("completed_at", "is", null)
           .in("course_id", courseIds);
-
         const completedIds = new Set((completed ?? []).map((e) => e.course_id));
         const missing = courseIds.filter((id) => !completedIds.has(id));
-
-        if (!cancelled) setRequiredBadge(missing.length);
-      } catch {
-        // badge không hiện nếu lỗi → silent fail
-      }
+        if (!cancelled) setStudyhubBadge(missing.length);
+      } catch { /* silent */ }
     })();
     return () => { cancelled = true; };
   }, []);
 
-  const tabs =
-    role === "manager" || role === "owner" ? MANAGER_TABS : STAFF_TABS;
+  useEffect(() => {
+    if (!isManagerOrOwner || !locationId) return;
+    const fetchPending = async () => {
+      try {
+        const { count } = await supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "pending")
+          .eq("location_id", locationId);
+        setPendingCount(count ?? 0);
+      } catch { /* silent */ }
+    };
+    fetchPending();
+    const interval = setInterval(fetchPending, 30_000);
+    return () => clearInterval(interval);
+  }, [isManagerOrOwner, locationId]);
+
+  const tabs = buildTabs(role, pendingCount, studyhubBadge);
+  const gridCols = tabs.length === 6 ? "grid-cols-6" : "grid-cols-5";
+
+  const isActive = (href: string) => {
+    if (href === "/home") return pathname === "/home";
+    return pathname.startsWith(href);
+  };
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-foreground/10 bg-background pb-[env(safe-area-inset-bottom)]">
-      <div className="flex items-center justify-around px-2 py-1">
-        {tabs.map((tab) => {
-          const isActive =
-            pathname === tab.href || pathname.startsWith(tab.href + "/");
-          const showBadge = tab.href === "/studyhub" && requiredBadge > 0;
-
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className="flex min-w-0 flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px]"
-              style={{ color: isActive ? brandColor : undefined }}
+    <nav
+      className={`fixed bottom-0 left-0 right-0 z-50 grid ${gridCols} bg-white border-t border-black/6 pb-[env(safe-area-inset-bottom)]`}
+      style={{ boxShadow: "0 -1px 0 rgba(0,0,0,0.06), 0 -4px 16px rgba(0,0,0,0.04)" }}
+    >
+      {tabs.map((tab) => {
+        const active = isActive(tab.href);
+        const IconComponent = tab.icon;
+        const badge = tab.badge;
+        return (
+          <button
+            key={tab.key}
+            onClick={() => router.push(tab.href)}
+            className="flex flex-col items-center justify-center gap-0.75 flex-1 py-2 relative"
+          >
+            <div className="relative flex items-center justify-center w-7 h-7 rounded-xl transition-all duration-200">
+              <IconComponent
+                size={22}
+                strokeWidth={1.5}
+                style={{ color: active ? "var(--brand-color)" : "#9ca3af" }}
+                className="transition-all duration-200"
+              />
+              {badge !== undefined && badge > 0 && (
+                <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center border-[1.5px] border-white">
+                  {badge > 9 ? "9+" : badge}
+                </span>
+              )}
+            </div>
+            <span
+              className="text-[10px] font-semibold leading-none transition-all duration-200 tracking-[0.02em]"
+              style={{
+                opacity: active ? 1 : 0,
+                height: active ? "auto" : 0,
+                overflow: "hidden",
+                color: active ? "var(--brand-color)" : "transparent",
+              }}
             >
-              {/* Icon + badge wrapper */}
-              <span className={`relative ${isActive ? "" : "text-foreground/40"}`}>
-                {tab.icon(isActive)}
-                {showBadge && (
-                  <span className="absolute -top-1 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">
-                    {requiredBadge}
-                  </span>
-                )}
-              </span>
-              <span className={isActive ? "font-medium" : "text-foreground/40"}>
-                {tab.label}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
+              {tab.label}
+            </span>
+          </button>
+        );
+      })}
     </nav>
   );
 }
