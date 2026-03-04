@@ -28,6 +28,7 @@ type StaffMember = {
   id: string;
   full_name: string;
   role: string;
+  status: string;
 };
 
 type Shift = {
@@ -83,12 +84,12 @@ export default function AdminShiftsPage() {
         .then(({ data: profile }) => {
           if (!profile?.location_id || ignore) return;
 
-          // Lấy danh sách staff/azubi cùng location
+          // Lấy danh sách staff/azubi cùng location (bao gồm cả pending)
           supabase
             .from("profiles")
-            .select("id, full_name, role")
+            .select("id, full_name, role, status")
             .eq("location_id", profile.location_id)
-            .eq("status", "active")
+            .neq("status", "suspended")
             .in("role", ["staff", "azubi"])
             .order("full_name")
             .then(({ data }) => {
@@ -267,11 +268,14 @@ export default function AdminShiftsPage() {
               className="w-full rounded-lg border border-foreground/10 bg-background px-3 py-2.5 text-sm text-foreground focus:border-foreground/30 focus:outline-none focus:ring-2 focus:ring-foreground/10"
             >
               {staffList.length === 0 && (
-                <option value="">Không có nhân viên</option>
+                <option value="">
+                  Không có nhân viên — cần duyệt tài khoản trước
+                </option>
               )}
               {staffList.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.full_name} ({s.role})
+                  {s.status === "pending" ? " · chờ duyệt" : ""}
                 </option>
               ))}
             </select>
