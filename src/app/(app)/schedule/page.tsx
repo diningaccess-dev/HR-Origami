@@ -59,14 +59,14 @@ export default function SchedulePage() {
   const weekEnd = endOfWeek(baseDate, { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-  // Label tuần
+  // Label tuần — tiếng Việt
   const weekLabel =
     weekOffset === 0
-      ? "Diese Woche"
+      ? "Tuần này"
       : weekOffset === 1
-        ? "Nächste Woche"
+        ? "Tuần sau"
         : weekOffset === -1
-          ? "Letzte Woche"
+          ? "Tuần trước"
           : `${format(weekStart, "dd.MM")} – ${format(weekEnd, "dd.MM.yyyy")}`;
 
   // ── Fetch shifts của user theo tuần ───────────────────────
@@ -210,7 +210,7 @@ export default function SchedulePage() {
                   {/* Ca làm */}
                   {dayShifts.length === 0 ? (
                     <p className="text-sm text-foreground/30 pl-1">
-                      Không có ca hôm nay
+                      Không có ca
                     </p>
                   ) : (
                     <div className="space-y-2">

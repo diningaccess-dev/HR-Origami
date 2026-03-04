@@ -8,6 +8,7 @@ import {
   type AttendanceInput,
   type TipDistribution,
 } from "@/lib/utils/tip-calculator";
+import FloatToast from "@/components/ui/FloatToast";
 
 // ── Types ────────────────────────────────────────────────────
 type Profile = {
@@ -39,7 +40,10 @@ export default function TipPoolPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    msg: string;
+    type: "ok" | "err";
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const supabase = useRef(createClient());
@@ -52,6 +56,10 @@ export default function TipPoolPage() {
     const t = setTimeout(() => setToast(null), 4000);
     return () => clearTimeout(t);
   }, [toast]);
+
+  function showToast(msg: string, type: "ok" | "err" = "ok") {
+    setToast({ msg, type });
+  }
 
   // ── Load profile ───────────────────────────────────────────
   useEffect(() => {
@@ -213,15 +221,15 @@ export default function TipPoolPage() {
     if (insertErr) {
       console.error("Lỗi lưu tip pool:", insertErr);
       if (insertErr.code === "23505") {
-        setToast("Ngày này đã có tip pool. Chỉ được tạo 1 lần/ngày.");
+        showToast("Ngày này đã có tip pool. Chỉ được tạo 1 lần/ngày.", "err");
       } else {
-        setToast("Không thể lưu. Thử lại sau.");
+        showToast("Không thể lưu. Thử lại sau.", "err");
       }
       setIsSaving(false);
       return;
     }
 
-    setToast("Đã lưu tip pool thành công ✓");
+    showToast("Đã lưu tip pool thành công ✓", "ok");
     setPreview(null);
     setTotalAmount("");
     await loadSavedPool();
@@ -338,11 +346,7 @@ export default function TipPoolPage() {
       </div>
 
       {/* Toast */}
-      {toast && (
-        <div className="rounded-xl border border-foreground/10 bg-foreground/[0.04] px-4 py-3 text-center text-sm text-foreground">
-          {toast}
-        </div>
-      )}
+      {toast && <FloatToast message={toast.msg} type={toast.type} />}
 
       {/* Chọn ngày */}
       <div>

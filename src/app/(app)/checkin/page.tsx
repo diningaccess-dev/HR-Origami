@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { useLocation } from "@/lib/hooks/useLocation";
 import { haversineDistance } from "@/lib/utils/geo";
 import PulseCheck from "@/components/features/PulseCheck";
+import FloatToast from "@/components/ui/FloatToast";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,7 +43,10 @@ export default function CheckinPage() {
   const [locationInfo, setLocationInfo] = useState<LocationInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    msg: string;
+    type: "ok" | "err";
+  } | null>(null);
   const [showPulseCheck, setShowPulseCheck] = useState(false);
   const [now, setNow] = useState(new Date());
 
@@ -52,8 +56,8 @@ export default function CheckinPage() {
     return () => clearInterval(interval);
   }, []);
 
-  function showToast(msg: string) {
-    setToast(msg);
+  function showToast(msg: string, type: "ok" | "err" = "ok") {
+    setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
   }
 
@@ -168,7 +172,7 @@ export default function CheckinPage() {
       .single();
 
     if (error) {
-      showToast("Lỗi check-in: " + error.message);
+      showToast("Lỗi check-in: " + error.message, "err");
     } else if (data) {
       setAttendance(data);
       showToast("Check-in thành công!");
@@ -191,10 +195,10 @@ export default function CheckinPage() {
       .single();
 
     if (error) {
-      showToast("Lỗi check-out: " + error.message);
+      showToast("Lỗi check-out: " + error.message, "err");
     } else if (data) {
       setAttendance(data);
-      showToast("Check-out thành công!");
+      showToast("Check-out thành công!", "ok");
       setShowPulseCheck(true);
     }
 
@@ -276,17 +280,7 @@ export default function CheckinPage() {
           <h1 className="text-xl font-semibold text-foreground">Check-in</h1>
 
           {/* ── Toast ────────────────────────────────────────── */}
-          {toast && (
-            <div
-              className={`rounded-lg border px-4 py-3 text-sm ${
-                toast.includes("thành công")
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                  : "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300"
-              }`}
-            >
-              {toast}
-            </div>
-          )}
+          {toast && <FloatToast message={toast.msg} type={toast.type} />}
 
           {/* ── Thông tin ca ─────────────────────────────────── */}
           <div className="rounded-xl border border-foreground/10 p-4 space-y-2">
