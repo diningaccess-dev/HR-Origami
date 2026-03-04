@@ -50,14 +50,20 @@ function simpleMarkdown(md: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     // Headers
-    .replace(/^### (.+)$/gm, '<h3 class="text-base font-bold mt-4 mb-1">$1</h3>')
+    .replace(
+      /^### (.+)$/gm,
+      '<h3 class="text-base font-bold mt-4 mb-1">$1</h3>',
+    )
     .replace(/^## (.+)$/gm, '<h2 class="text-lg font-bold mt-5 mb-1">$1</h2>')
     .replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold mt-6 mb-2">$1</h1>')
     // Bold & italic
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     // Inline code
-    .replace(/`(.+?)`/g, '<code class="bg-foreground/5 px-1 py-0.5 rounded text-sm">$1</code>')
+    .replace(
+      /`(.+?)`/g,
+      '<code class="bg-foreground/5 px-1 py-0.5 rounded text-sm">$1</code>',
+    )
     // Unordered list
     .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
     // Line breaks
@@ -131,7 +137,9 @@ export default function LessonPlayerPage() {
       // Tất cả lessons của course (để navigation)
       const { data: lessonsData } = await supabase
         .from("lessons")
-        .select("id, course_id, title, content_type, content_url, content_body, order_index, duration_minutes")
+        .select(
+          "id, course_id, title, content_type, content_url, content_body, order_index, duration_minutes",
+        )
         .eq("course_id", courseId)
         .order("order_index", { ascending: true });
 
@@ -145,7 +153,8 @@ export default function LessonPlayerPage() {
       }
 
       // Kiểm tra enrollment (trừ manager/owner)
-      const isManager = profile?.role === "manager" || profile?.role === "owner";
+      const isManager =
+        profile?.role === "manager" || profile?.role === "owner";
       if (!isManager) {
         const { data: enroll } = await supabase
           .from("course_enrollments")
@@ -166,7 +175,9 @@ export default function LessonPlayerPage() {
       if (current.content_type === "quiz") {
         const { data: quizData } = await supabase
           .from("quizzes")
-          .select("id, question, options, correct_option_id, explanation, order_index")
+          .select(
+            "id, question, options, correct_option_id, explanation, order_index",
+          )
           .eq("lesson_id", lessonId)
           .order("order_index", { ascending: true });
         setQuizQuestions(quizData ?? []);
@@ -246,9 +257,7 @@ export default function LessonPlayerPage() {
         profile_id: userId,
         amount: xp,
         reason:
-          lesson?.content_type === "quiz"
-            ? "quiz_perfect"
-            : "lesson_complete",
+          lesson?.content_type === "quiz" ? "quiz_perfect" : "lesson_complete",
         reference_id: lessonId,
       });
 
@@ -449,14 +458,16 @@ export default function LessonPlayerPage() {
         )}
 
         {/* ── Quiz content ── */}
-        {lesson.content_type === "quiz" && quizQuestions.length > 0 && !completed && (
-          <QuizPlayer
-            questions={quizQuestions}
-            onFinish={(score) => {
-              markCompleted(score);
-            }}
-          />
-        )}
+        {lesson.content_type === "quiz" &&
+          quizQuestions.length > 0 &&
+          !completed && (
+            <QuizPlayer
+              questions={quizQuestions}
+              onFinish={(score) => {
+                markCompleted(score);
+              }}
+            />
+          )}
 
         {lesson.content_type === "quiz" && quizQuestions.length === 0 && (
           <div className="rounded-2xl border border-border bg-background px-4 py-6 text-center">

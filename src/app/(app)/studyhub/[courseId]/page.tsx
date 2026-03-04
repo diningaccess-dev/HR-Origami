@@ -142,7 +142,9 @@ export default function CourseDetailPage() {
       // Fetch lessons (theo thứ tự)
       const { data: lessonsData, error: lErr } = await supabase
         .from("lessons")
-        .select("id, course_id, title, content_type, duration_minutes, order_index")
+        .select(
+          "id, course_id, title, content_type, duration_minutes, order_index",
+        )
         .eq("course_id", courseId)
         .order("order_index", { ascending: true });
 
@@ -190,8 +192,12 @@ export default function CourseDetailPage() {
   );
   const completedCount = completedSet.size;
   const totalLessons = lessons.length;
-  const pct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
-  const totalDuration = lessons.reduce((s, l) => s + (l.duration_minutes ?? 0), 0);
+  const pct =
+    totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+  const totalDuration = lessons.reduce(
+    (s, l) => s + (l.duration_minutes ?? 0),
+    0,
+  );
   const isManager = userRole === "manager" || userRole === "owner";
   const isEnrolled = !!enrollment;
   const isCompleted = !!enrollment?.completed_at;
@@ -245,7 +251,10 @@ export default function CourseDetailPage() {
           <div className="h-6 w-3/4 rounded bg-foreground/10 animate-pulse" />
           <div className="flex gap-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-5 w-16 rounded-full bg-foreground/10 animate-pulse" />
+              <div
+                key={i}
+                className="h-5 w-16 rounded-full bg-foreground/10 animate-pulse"
+              />
             ))}
           </div>
           <div className="h-10 w-full rounded-xl bg-foreground/10 animate-pulse" />
@@ -322,7 +331,11 @@ export default function CourseDetailPage() {
             stroke="currentColor"
             strokeWidth={2}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 19.5 8.25 12l7.5-7.5"
+            />
           </svg>
         </Link>
 
@@ -415,9 +428,26 @@ export default function CourseDetailPage() {
           >
             {enrolling ? (
               <span className="flex items-center justify-center gap-2">
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
-                  <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75" />
+                <svg
+                  className="h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    className="opacity-25"
+                  />
+                  <path
+                    d="M4 12a8 8 0 018-8"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    className="opacity-75"
+                  />
                 </svg>
                 Đang đăng ký…
               </span>
@@ -560,7 +590,11 @@ function LessonRow({
           stroke="currentColor"
           strokeWidth={2}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="m8.25 4.5 7.5 7.5-7.5 7.5"
+          />
         </svg>
       )}
     </>

@@ -20,8 +20,6 @@ type Course = {
   created_at: string;
 };
 
-
-
 /* ── Constants ─────────────────────────────────── */
 const CATEGORY_LABELS: Record<string, string> = {
   onboarding: "Onboarding",
@@ -84,9 +82,7 @@ export default function CourseManagePage() {
       const { data: coursesData } = await supabase
         .from("courses")
         .select("id, title, category, published_at, location_id, created_at")
-        .or(
-          `location_id.eq.${profile.location_id},location_id.is.null`,
-        )
+        .or(`location_id.eq.${profile.location_id},location_id.is.null`)
         .order("created_at", { ascending: false });
 
       setCourses(coursesData ?? []);
@@ -202,16 +198,30 @@ export default function CourseManagePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Quản lý khóa học</h1>
-          <p className="text-xs text-muted-foreground">{courses.length} khóa học</p>
+          <h1 className="text-xl font-bold text-foreground">
+            Quản lý khóa học
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            {courses.length} khóa học
+          </p>
         </div>
         <Link
           href="/studyhub/manage/new"
           className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white active:opacity-80"
           style={{ backgroundColor: "var(--brand-color)" }}
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 4.5v15m7.5-7.5h-15"
+            />
           </svg>
           Tạo mới
         </Link>

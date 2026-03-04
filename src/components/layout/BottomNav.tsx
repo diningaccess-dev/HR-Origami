@@ -2,6 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
+import { useEffect, useState } from "react";
+
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 // ── Tab definitions ──────────────────────────────────────────
 type Tab = {
@@ -45,24 +52,6 @@ function IconCalendar({ active }: { active: boolean }) {
       <path d="M16 2v4" />
       <rect width="18" height="18" x="3" y="4" rx="2" />
       <path d="M3 10h18" />
-    </svg>
-  );
-}
-
-function IconCheckin({ active }: { active: boolean }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill={active ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
-      <circle cx="12" cy="10" r="3" />
     </svg>
   );
 }
@@ -146,6 +135,24 @@ function IconProfile({ active }: { active: boolean }) {
   );
 }
 
+function IconBook({ active }: { active: boolean }) {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill={active ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+    </svg>
+  );
+}
+
 function IconChat({ active }: { active: boolean }) {
   return (
     <svg
@@ -176,9 +183,9 @@ const STAFF_TABS: Tab[] = [
     icon: (a) => <IconCalendar active={a} />,
   },
   {
-    href: "/checkin",
-    label: "Check-in",
-    icon: (a) => <IconCheckin active={a} />,
+    href: "/studyhub",
+    label: "Học",
+    icon: (a) => <IconBook active={a} />,
   },
   {
     href: "/chat",
@@ -203,6 +210,11 @@ const MANAGER_TABS: Tab[] = [
     href: "/schedule",
     label: "Lịch",
     icon: (a) => <IconCalendar active={a} />,
+  },
+  {
+    href: "/studyhub",
+    label: "Học",
+    icon: (a) => <IconBook active={a} />,
   },
   {
     href: "/checklist",
@@ -234,8 +246,46 @@ type BottomNavProps = {
 
 export default function BottomNav({ role }: BottomNavProps) {
   const pathname = usePathname();
-  // brandColor được inject bởi layout qua CSS custom property --brand-color
   const brandColor = "var(--brand-color)";
+  const [requiredBadge, setRequiredBadge] = useState(0);
+
+  // Fetch số khóa bắt buộc chưa hoàn thành → hiện badge đỏ
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || cancelled) return;
+
+        // Lấy tất cả khóa bắt buộc đã published
+        const { data: requiredCourses } = await supabase
+          .from("courses")
+          .select("id")
+          .eq("is_required", true)
+          .not("published_at", "is", null);
+
+        if (!requiredCourses || requiredCourses.length === 0 || cancelled) return;
+
+        const courseIds = requiredCourses.map((c) => c.id);
+
+        // Lấy enrollment đã hoàn thành của user
+        const { data: completed } = await supabase
+          .from("course_enrollments")
+          .select("course_id")
+          .eq("profile_id", user.id)
+          .not("completed_at", "is", null)
+          .in("course_id", courseIds);
+
+        const completedIds = new Set((completed ?? []).map((e) => e.course_id));
+        const missing = courseIds.filter((id) => !completedIds.has(id));
+
+        if (!cancelled) setRequiredBadge(missing.length);
+      } catch {
+        // badge không hiện nếu lỗi → silent fail
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const tabs =
     role === "manager" || role === "owner" ? MANAGER_TABS : STAFF_TABS;
@@ -246,6 +296,7 @@ export default function BottomNav({ role }: BottomNavProps) {
         {tabs.map((tab) => {
           const isActive =
             pathname === tab.href || pathname.startsWith(tab.href + "/");
+          const showBadge = tab.href === "/studyhub" && requiredBadge > 0;
 
           return (
             <Link
@@ -254,8 +305,14 @@ export default function BottomNav({ role }: BottomNavProps) {
               className="flex min-w-0 flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px]"
               style={{ color: isActive ? brandColor : undefined }}
             >
-              <span className={isActive ? "" : "text-foreground/40"}>
+              {/* Icon + badge wrapper */}
+              <span className={`relative ${isActive ? "" : "text-foreground/40"}`}>
                 {tab.icon(isActive)}
+                {showBadge && (
+                  <span className="absolute -top-1 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">
+                    {requiredBadge}
+                  </span>
+                )}
               </span>
               <span className={isActive ? "font-medium" : "text-foreground/40"}>
                 {tab.label}

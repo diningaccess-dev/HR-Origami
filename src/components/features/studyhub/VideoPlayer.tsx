@@ -32,7 +32,7 @@ export default function VideoPlayer({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Tính 80% thời lượng ước tính (giây). Nếu không có → 30 giây mặc định
-  const threshold = ((durationMinutes ?? 1) * 60) * 0.8;
+  const threshold = (durationMinutes ?? 1) * 60 * 0.8;
 
   useEffect(() => {
     // Với YouTube, cho phép hoàn thành sau 80% thời lượng ước tính

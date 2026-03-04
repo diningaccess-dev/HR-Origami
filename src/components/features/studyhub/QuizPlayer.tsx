@@ -65,7 +65,10 @@ export default function QuizPlayer({
           <p className="text-2xl font-bold text-foreground">
             {correctCount}/{total} câu đúng
           </p>
-          <p className="text-lg font-semibold mt-1" style={{ color: passed ? "#16a34a" : "#dc2626" }}>
+          <p
+            className="text-lg font-semibold mt-1"
+            style={{ color: passed ? "#16a34a" : "#dc2626" }}
+          >
             {scorePct}%
           </p>
         </div>
@@ -214,7 +217,9 @@ export default function QuizPlayer({
       {/* Giải thích (sau khi confirmed + sai) */}
       {confirmed && !isCorrect && q.explanation && (
         <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
-          <p className="text-xs font-semibold text-amber-800 mb-1">Giải thích:</p>
+          <p className="text-xs font-semibold text-amber-800 mb-1">
+            Giải thích:
+          </p>
           <p className="text-xs text-amber-700">{q.explanation}</p>
         </div>
       )}

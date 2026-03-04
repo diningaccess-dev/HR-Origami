@@ -195,12 +195,14 @@ export default function LeaderboardPage() {
                 style={{
                   backgroundColor: colors.bg,
                   borderColor: colors.border,
-                  minHeight: isFirst ? "10rem" : realRank === 1 ? "8.5rem" : "7.5rem",
+                  minHeight: isFirst
+                    ? "10rem"
+                    : realRank === 1
+                      ? "8.5rem"
+                      : "7.5rem",
                 }}
               >
-                <span className="text-2xl mb-1">
-                  {PODIUM_MEDALS[realRank]}
-                </span>
+                <span className="text-2xl mb-1">{PODIUM_MEDALS[realRank]}</span>
 
                 {/* Avatar */}
                 <div

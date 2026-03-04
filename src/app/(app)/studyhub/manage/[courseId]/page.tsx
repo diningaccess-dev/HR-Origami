@@ -287,9 +287,7 @@ export default function CourseEditorPage() {
         duration_minutes: lessonForm.duration_minutes
           ? parseInt(lessonForm.duration_minutes)
           : null,
-        order_index: editingLesson
-          ? editingLesson.order_index
-          : lessons.length,
+        order_index: editingLesson ? editingLesson.order_index : lessons.length,
       };
 
       if (editingLesson) {
@@ -523,9 +521,7 @@ export default function CourseEditorPage() {
           [
             { key: "info", label: "Thông tin" },
             { key: "lessons", label: `Bài học (${lessons.length})` },
-            ...(quizLessons.length > 0
-              ? [{ key: "quiz", label: "Quiz" }]
-              : []),
+            ...(quizLessons.length > 0 ? [{ key: "quiz", label: "Quiz" }] : []),
           ] as { key: "info" | "lessons" | "quiz"; label: string }[]
         ).map((tab) => (
           <button
@@ -549,10 +545,7 @@ export default function CourseEditorPage() {
 
       {/* ══════ TAB: INFO ══════ */}
       {activeTab === "info" && (
-        <form
-          onSubmit={handleSubmit(onSaveCourse)}
-          className="space-y-4"
-        >
+        <form onSubmit={handleSubmit(onSaveCourse)} className="space-y-4">
           {/* Title */}
           <div>
             <label className="text-xs font-medium text-muted-foreground">
@@ -562,12 +555,16 @@ export default function CourseEditorPage() {
               {...register("title")}
               className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2"
               style={
-                { "--tw-ring-color": "var(--brand-color)" } as React.CSSProperties
+                {
+                  "--tw-ring-color": "var(--brand-color)",
+                } as React.CSSProperties
               }
               placeholder="VD: Quy trình vệ sinh nhà hàng"
             />
             {errors.title && (
-              <p className="mt-1 text-xs text-red-600">{errors.title.message}</p>
+              <p className="mt-1 text-xs text-red-600">
+                {errors.title.message}
+              </p>
             )}
           </div>
 
@@ -581,7 +578,9 @@ export default function CourseEditorPage() {
               rows={3}
               className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 resize-none"
               style={
-                { "--tw-ring-color": "var(--brand-color)" } as React.CSSProperties
+                {
+                  "--tw-ring-color": "var(--brand-color)",
+                } as React.CSSProperties
               }
               placeholder="Mô tả ngắn về khóa học…"
             />
@@ -628,9 +627,7 @@ export default function CourseEditorPage() {
               {...register("is_required")}
               className="h-5 w-5 rounded border-border accent-(--brand-color)"
             />
-            <span className="text-sm text-foreground">
-              Bắt buộc hoàn thành
-            </span>
+            <span className="text-sm text-foreground">Bắt buộc hoàn thành</span>
           </label>
 
           {/* Save button */}
@@ -911,7 +908,11 @@ export default function CourseEditorPage() {
                       : undefined
                   }
                 >
-                  {t === "text" ? "📝 Text" : t === "video" ? "🎬 Video" : "❓ Quiz"}
+                  {t === "text"
+                    ? "📝 Text"
+                    : t === "video"
+                      ? "🎬 Video"
+                      : "❓ Quiz"}
                 </button>
               ))}
             </div>
