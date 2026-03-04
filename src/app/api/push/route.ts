@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createClient } from "@supabase/supabase-js";
 
-// ── VAPID config ─────────────────────────────────────────────
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-);
+// ── VAPID config (lazy init để tránh crash lúc build) ────────
+let vapidReady = false;
+function ensureVapid() {
+  if (vapidReady) return;
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!,
+  );
+  vapidReady = true;
+}
 
 // ── Supabase admin (service role để bypass RLS khi gửi push) ─
 function getAdminClient() {
@@ -21,6 +26,7 @@ function getAdminClient() {
 // ── POST /api/push/subscribe — lưu subscription vào DB ───────
 // ── POST /api/push/send      — gửi push đến danh sách users ─
 export async function POST(req: NextRequest) {
+  ensureVapid();
   const url = new URL(req.url);
   const action = url.searchParams.get("action");
 
