@@ -216,9 +216,7 @@ export default function StudyhubPage() {
   const inProgress = courses.filter(
     (c) =>
       enrolledCourseIds.has(c.id) &&
-      enrollments.some(
-        (e) => e.course_id === c.id && e.completed_at === null,
-      ),
+      enrollments.some((e) => e.course_id === c.id && e.completed_at === null),
   );
 
   // Khóa mới (chưa enroll, published trong 30 ngày)
@@ -226,8 +224,7 @@ export default function StudyhubPage() {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const newCourses = courses.filter(
     (c) =>
-      !enrolledCourseIds.has(c.id) &&
-      new Date(c.published_at) >= thirtyDaysAgo,
+      !enrolledCourseIds.has(c.id) && new Date(c.published_at) >= thirtyDaysAgo,
   );
 
   // Filter tất cả khóa theo category
