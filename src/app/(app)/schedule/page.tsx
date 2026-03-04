@@ -12,6 +12,7 @@ import {
   isToday,
 } from "date-fns";
 import { de } from "date-fns/locale";
+import { setCache, getCache, CACHE_KEYS } from "@/lib/utils/offlineCache";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -77,6 +78,8 @@ export default function SchedulePage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user || ignore) return;
 
+      const cacheKey = CACHE_KEYS.shifts(user.id, weekOffset);
+
       supabase
         .from("shifts")
         .select("id, start_time, end_time, role_tag, status, location_id")
@@ -84,11 +87,23 @@ export default function SchedulePage() {
         .gte("start_time", weekStart.toISOString())
         .lte("start_time", weekEnd.toISOString())
         .order("start_time", { ascending: true })
-        .then(({ data }) => {
-          if (!ignore) {
-            setShifts(data ?? []);
-            setLoading(false);
+        .then(({ data, error }) => {
+          if (ignore) return;
+
+          if (error || !data) {
+            // Mất mạng → đọc cache
+            const cached = getCache<Shift[]>(cacheKey);
+            if (cached) {
+              setShifts(cached);
+            } else {
+              setShifts([]);
+            }
+          } else {
+            // Có mạng → lưu cache + hiện
+            setCache(cacheKey, data);
+            setShifts(data);
           }
+          setLoading(false);
         });
     });
 

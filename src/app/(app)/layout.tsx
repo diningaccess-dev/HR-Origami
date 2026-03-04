@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import BottomNav from "@/components/layout/BottomNav";
 import UrgentOverlay from "@/components/features/UrgentOverlay";
 import { getBrandColor } from "@/lib/utils/theme";
+import OfflineBanner from "@/components/ui/OfflineBanner";
 
 export default async function AppLayout({
   children,
@@ -50,6 +51,7 @@ export default async function AppLayout({
       style={{ "--brand-color": brandColor } as React.CSSProperties}
     >
       {children}
+      <OfflineBanner />
       <UrgentOverlay />
       <BottomNav role={role} locationId={locationId} />
     </div>
