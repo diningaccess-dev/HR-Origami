@@ -42,13 +42,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="de">
+    <html lang="de" suppressHydrationWarning>
       <head>
         {/* PWA — Apple touch icon */}
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         {children}
         <ServiceWorkerRegistrar />
