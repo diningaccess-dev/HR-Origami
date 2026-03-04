@@ -3,13 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { useEffect, useState } from "react";
-import {
-  Home,
-  Calendar,
-  MessageCircle,
-  BookOpen,
-  User,
-} from "lucide-react";
+import { Home, Calendar, MessageCircle, BookOpen, User } from "lucide-react";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,14 +27,30 @@ function buildTabs(
   chatBadge: number,
   studyhubBadge: number,
 ): TabItem[] {
-  const home: TabItem = { key: "home", label: "Home", href: "/home", icon: Home };
-  const schedule: TabItem = { key: "schedule", label: "Lịch", href: "/schedule", icon: Calendar };
+  const home: TabItem = {
+    key: "home",
+    label: "Home",
+    href: "/home",
+    icon: Home,
+  };
+  const schedule: TabItem = {
+    key: "schedule",
+    label: "Lịch",
+    href: "/schedule",
+    icon: Calendar,
+  };
   const chat: TabItem = {
-    key: "chat", label: "Chat", href: "/chat", icon: MessageCircle,
+    key: "chat",
+    label: "Chat",
+    href: "/chat",
+    icon: MessageCircle,
     badge: chatBadge || undefined,
   };
   const studyhub: TabItem = {
-    key: "studyhub", label: "Học", href: "/studyhub", icon: BookOpen,
+    key: "studyhub",
+    label: "Học",
+    href: "/studyhub",
+    icon: BookOpen,
     badge: studyhubBadge || undefined,
   };
   const hr: TabItem = { key: "hr", label: "Hồ sơ", href: "/hr", icon: User };
@@ -72,7 +82,9 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
     let cancelled = false;
     (async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user || cancelled) return;
         const { data: requiredCourses } = await supabase
           .from("courses")
@@ -90,9 +102,13 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
         const completedIds = new Set((completed ?? []).map((e) => e.course_id));
         const missing = courseIds.filter((id) => !completedIds.has(id));
         if (!cancelled) setStudyhubBadge(missing.length);
-      } catch { /* silent */ }
+      } catch {
+        /* silent */
+      }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [role]);
 
   const tabs = buildTabs(role, chatBadge, studyhubBadge);
@@ -107,8 +123,12 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
   // Pill width theo số tab (từ HTML preview)
   const pillW = (active: boolean) =>
     is5
-      ? active ? 44 : 38   // 5 tab
-      : active ? 52 : 44;  // 4 tab
+      ? active
+        ? 44
+        : 38 // 5 tab
+      : active
+        ? 52
+        : 44; // 4 tab
 
   const isActive = (href: string) => {
     if (href === "/home") return pathname === "/home";
