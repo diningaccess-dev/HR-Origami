@@ -205,9 +205,14 @@ const MANAGER_TABS: Tab[] = [
     icon: (a) => <IconCalendar active={a} />,
   },
   {
-    href: "/chat",
-    label: "Chat",
-    icon: (a) => <IconChat active={a} />,
+    href: "/checklist",
+    label: "Checklist",
+    icon: (a) => <IconChecklist active={a} />,
+  },
+  {
+    href: "/finance/tip-pool",
+    label: "Tip",
+    icon: (a) => <IconMoney active={a} />,
   },
   {
     href: "/admin/approval",
