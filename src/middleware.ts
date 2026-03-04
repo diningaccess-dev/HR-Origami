@@ -12,6 +12,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Bỏ qua static PWA files — KHÔNG redirect sw.js, manifest.json, icons
+  if (
+    pathname === "/sw.js" ||
+    pathname === "/manifest.json" ||
+    pathname.startsWith("/icons")
+  ) {
+    return NextResponse.next();
+  }
+
   // Khởi tạo response để có thể ghi cookie
   let supabaseResponse = NextResponse.next({ request });
 
