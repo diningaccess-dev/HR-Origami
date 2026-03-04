@@ -94,9 +94,9 @@ export async function middleware(request: NextRequest) {
 }
 
 // Chỉ chạy middleware trên các route cần thiết
-// Bỏ qua static files, _next, favicon
+// Bỏ qua static files, _next, favicon, sw.js, manifest.json, icons/
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|manifest\\.json|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
