@@ -6,10 +6,8 @@ import { useEffect, useState } from "react";
 import {
   Home,
   Calendar,
+  MessageCircle,
   BookOpen,
-  ClipboardList,
-  CircleDollarSign,
-  UserCheck,
   User,
 } from "lucide-react";
 
@@ -27,40 +25,32 @@ type TabItem = {
   badge?: number;
 };
 
-// -- Build tabs theo role
-// staff/azubi → 5 tab, manager/owner → 6 tab
+// -- Build tabs theo role (dựa theo HTML preview)
+// staff / manager / owner → 4 tab: Home · Lịch · Chat · Hồ sơ
+// azubi → 5 tab: Home · Lịch · Chat · Học · Hồ sơ
 function buildTabs(
   role: string,
-  pendingCount: number,
+  chatBadge: number,
   studyhubBadge: number,
 ): TabItem[] {
   const home: TabItem = { key: "home", label: "Home", href: "/home", icon: Home };
   const schedule: TabItem = { key: "schedule", label: "Lịch", href: "/schedule", icon: Calendar };
-  const hr: TabItem = { key: "hr", label: "Hồ sơ", href: "/hr", icon: User };
-
-  const checklist: TabItem = { key: "checklist", label: "Checklist", href: "/checklist", icon: ClipboardList };
-  const tip: TabItem = { key: "tip", label: "Tip", href: "/finance/tip-pool", icon: CircleDollarSign };
+  const chat: TabItem = {
+    key: "chat", label: "Chat", href: "/chat", icon: MessageCircle,
+    badge: chatBadge || undefined,
+  };
   const studyhub: TabItem = {
     key: "studyhub", label: "Học", href: "/studyhub", icon: BookOpen,
     badge: studyhubBadge || undefined,
   };
-  const approval: TabItem = {
-    key: "approval", label: "Duyệt", href: "/admin/approval", icon: UserCheck,
-    badge: pendingCount || undefined,
-  };
+  const hr: TabItem = { key: "hr", label: "Hồ sơ", href: "/hr", icon: User };
 
-  // Sắp xếp tab theo role
-  switch (role) {
-    case "azubi":
-      return [home, schedule, studyhub, checklist, hr];
-    case "staff":
-      return [home, schedule, checklist, tip, hr];
-    case "manager":
-    case "owner":
-      return [home, schedule, checklist, tip, approval, hr];
-    default:
-      return [home, schedule, checklist, hr];
+  // Azubi: thêm tab Học vào giữa Chat và Hồ sơ
+  if (role === "azubi") {
+    return [home, schedule, chat, studyhub, hr];
   }
+  // Các role còn lại: 4 tab cơ bản
+  return [home, schedule, chat, hr];
 }
 
 // -- Component
@@ -73,10 +63,8 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const [chatBadge, setChatBadge] = useState(0);
   const [studyhubBadge, setStudyhubBadge] = useState(0);
-  const [pendingCount, setPendingCount] = useState(0);
-
-  const isManagerOrOwner = role === "manager" || role === "owner";
 
   // Badge: khóa học bắt buộc chưa hoàn thành (chỉ azubi)
   useEffect(() => {
@@ -107,34 +95,20 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
     return () => { cancelled = true; };
   }, [role]);
 
-  // Badge: pending profiles (manager/owner), poll mỗi 30s
-  useEffect(() => {
-    if (!isManagerOrOwner || !locationId) return;
-    const fetchPending = async () => {
-      try {
-        const { count } = await supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "pending")
-          .eq("location_id", locationId);
-        setPendingCount(count ?? 0);
-      } catch { /* silent */ }
-    };
-    fetchPending();
-    const interval = setInterval(fetchPending, 30_000);
-    return () => clearInterval(interval);
-  }, [isManagerOrOwner, locationId]);
+  const tabs = buildTabs(role, chatBadge, studyhubBadge);
+  const is5 = tabs.length === 5;
 
-  const tabs = buildTabs(role, pendingCount, studyhubBadge);
-  const is6 = tabs.length === 6;
-  const gridCols = is6 ? "grid-cols-6" : "grid-cols-5";
-  const iconSize = is6 ? 20 : 22;
+  // Grid: 5 cột cho azubi, 4 cột cho các role còn lại
+  const gridCols = is5 ? "grid-cols-5" : "grid-cols-4";
 
-  // Pill width: nhỏ hơn khi 6 tab, rộng hơn khi active
+  // Icon size: nhỏ hơn khi 5 tab
+  const iconSize = is5 ? 18 : 20;
+
+  // Pill width theo số tab (từ HTML preview)
   const pillW = (active: boolean) =>
-    is6
-      ? active ? 40 : 34
-      : active ? 44 : 38;
+    is5
+      ? active ? 44 : 38   // 5 tab
+      : active ? 52 : 44;  // 4 tab
 
   const isActive = (href: string) => {
     if (href === "/home") return pathname === "/home";
@@ -158,7 +132,7 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
           <button
             key={tab.key}
             onClick={() => router.push(tab.href)}
-            className="flex flex-col items-center justify-center gap-0.75"
+            className="flex flex-col items-center justify-center gap-[3px]"
           >
             {/* Nav Pill — nền brand 10% khi active */}
             <div
@@ -172,7 +146,7 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
             >
               <IconComponent
                 size={iconSize}
-                strokeWidth={1.5}
+                strokeWidth={1.8}
                 style={{ color: active ? "var(--brand-color)" : "#c0c8d0" }}
                 className="transition-colors duration-200"
               />
