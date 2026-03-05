@@ -120,19 +120,21 @@ export default function QuickActions({ role, locationId }: QuickActionsProps) {
       const supabase = createClient();
 
       // Badge checklist: item chưa tick hôm nay
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const { data: runs } = await supabase
-        .from("checklist_runs")
-        .select("progress")
-        .eq("date", todayStr)
-        .limit(1)
-        .maybeSingle();
+      try {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const { data: runs } = await supabase
+          .from("checklist_runs")
+          .select("progress")
+          .eq("date", todayStr)
+          .limit(1)
+          .maybeSingle();
 
-      // Nếu progress < 100 thì hiện badge
-      if (runs && runs.progress < 100) {
-        // Hiện số % chưa xong (ước lượng số item)
-        const remaining = Math.max(1, Math.ceil((100 - runs.progress) / 10));
-        setChecklistBadge(remaining);
+        if (runs && runs.progress < 100) {
+          const remaining = Math.max(1, Math.ceil((100 - runs.progress) / 10));
+          setChecklistBadge(remaining);
+        }
+      } catch {
+        // Table chưa tồn tại → bỏ qua
       }
 
       // Badge pending profiles (chỉ manager/owner)
