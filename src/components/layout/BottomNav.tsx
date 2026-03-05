@@ -49,20 +49,23 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
         setPendingCount(count ?? 0);
       }
 
-      // Unread messages (tất cả role)
+      // Unread messages — đếm tin mới trong 24h không phải của mình
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
-        const { data } = await supabase
-          .from("messages")
-          .select("id, read_by")
-          .not("read_by", "cs", `{${user.id}}`);
-        setUnreadCount(
-          (data ?? []).filter(
-            (m) => !Array.isArray(m.read_by) || !m.read_by.includes(user.id),
-          ).length,
-        );
+        try {
+          const since = new Date();
+          since.setHours(since.getHours() - 24);
+          const { count } = await supabase
+            .from("messages")
+            .select("*", { count: "exact", head: true })
+            .neq("sender_id", user.id)
+            .gte("created_at", since.toISOString());
+          setUnreadCount(count ?? 0);
+        } catch {
+          // read_by / messages table chưa sẵn sàng
+        }
       }
     } catch {
       /* silent */
