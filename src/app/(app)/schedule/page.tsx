@@ -1,294 +1,296 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
-import { useEffect, useState } from "react";
-import {
-  startOfWeek,
-  endOfWeek,
-  addWeeks,
-  eachDayOfInterval,
-  isSameDay,
-  format,
-  isToday,
-} from "date-fns";
-import { de } from "date-fns/locale";
-import { setCache, getCache, CACHE_KEYS } from "@/lib/utils/offlineCache";
+import { useEffect, useState, useCallback } from "react";
+import { format, startOfWeek } from "date-fns";
+import { createClient } from "@/lib/supabase/client";
+import { Plus } from "lucide-react";
+import WeekStrip from "@/components/features/schedule/WeekStrip";
+import ShiftCard from "@/components/features/schedule/ShiftCard";
+import type { ShiftData } from "@/components/features/schedule/ShiftCard";
+import NewShiftModal from "@/components/features/schedule/NewShiftModal";
 
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
-
-type Shift = {
-  id: string;
-  start_time: string;
-  end_time: string;
-  role_tag: string | null;
-  status: string;
-  location_id: string | null;
+// Background surface theo quán
+const SCREEN_BG: Record<string, string> = {
+  enso: "#f4f7f5",
+  origami: "#faf6f2",
+  okyu: "#fdf4f4",
 };
-
-// ── Role tag label ────────────────────────────────────────────
-const ROLE_TAG_LABELS: Record<string, string> = {
-  bar: "Bar",
-  kitchen: "Küche",
-  service: "Service",
-  all: "Alle",
-};
-
-// ── Skeleton loader ───────────────────────────────────────────
-function SkeletonDay() {
-  return (
-    <div className="space-y-2">
-      <div className="h-4 w-24 rounded bg-foreground/10 animate-pulse" />
-      <div className="rounded-xl border border-foreground/10 p-4">
-        <div className="h-4 w-32 rounded bg-foreground/10 animate-pulse mb-2" />
-        <div className="h-3 w-20 rounded bg-foreground/8 animate-pulse" />
-      </div>
-    </div>
-  );
-}
 
 export default function SchedulePage() {
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [shifts, setShifts] = useState<ShiftData[]>([]);
+  const [daysWithShifts, setDaysWithShifts] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  // Tuần hiện tại tính từ offset (thứ 2 → CN)
-  const baseDate = addWeeks(new Date(), weekOffset);
-  const weekStart = startOfWeek(baseDate, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(baseDate, { weekStartsOn: 1 });
-  const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  // Profile info
+  const [role, setRole] = useState("");
+  const [locationId, setLocationId] = useState("enso");
+  const [userId, setUserId] = useState("");
 
-  // Label tuần — tiếng Việt
-  const weekLabel =
-    weekOffset === 0
-      ? "Tuần này"
-      : weekOffset === 1
-        ? "Tuần sau"
-        : weekOffset === -1
-          ? "Tuần trước"
-          : `${format(weekStart, "dd.MM")} – ${format(weekEnd, "dd.MM.yyyy")}`;
+  const isManager = role === "manager" || role === "owner";
 
-  // ── Fetch shifts của user theo tuần ───────────────────────
+  // ── Fetch profile lần đầu ────────────────────────────────
   useEffect(() => {
-    let ignore = false;
-    setLoading(true);
-
+    const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user || ignore) return;
-
-      const cacheKey = CACHE_KEYS.shifts(user.id, weekOffset);
-
+      if (!user) return;
+      setUserId(user.id);
       supabase
-        .from("shifts")
-        .select("id, start_time, end_time, role_tag, status, location_id")
-        .eq("profile_id", user.id)
-        .gte("start_time", weekStart.toISOString())
-        .lte("start_time", weekEnd.toISOString())
-        .order("start_time", { ascending: true })
-        .then(({ data, error }) => {
-          if (ignore) return;
-
-          if (error || !data) {
-            // Mất mạng → đọc cache
-            const cached = getCache<Shift[]>(cacheKey);
-            if (cached) {
-              setShifts(cached);
-            } else {
-              setShifts([]);
-            }
-          } else {
-            // Có mạng → lưu cache + hiện
-            setCache(cacheKey, data);
-            setShifts(data);
+        .from("profiles")
+        .select("role, location_id")
+        .eq("id", user.id)
+        .single()
+        .then(({ data: profile }) => {
+          if (profile) {
+            setRole(profile.role);
+            setLocationId(profile.location_id ?? "enso");
           }
-          setLoading(false);
         });
     });
+  }, []);
 
-    return () => {
-      ignore = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekOffset]);
+  // ── Fetch shifts theo ngày selected ──────────────────────
+  const fetchShifts = useCallback(async () => {
+    if (!userId || !locationId) return;
+    setLoading(true);
 
-  // ── Shifts theo từng ngày ─────────────────────────────────
-  function shiftsForDay(day: Date): Shift[] {
-    return shifts.filter((s) => isSameDay(new Date(s.start_time), day));
-  }
+    const supabase = createClient();
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const dayStart = `${dateStr}T00:00:00`;
+    const dayEnd = `${dateStr}T23:59:59`;
+
+    // Query shifts cho ngày
+    let query = supabase
+      .from("shifts")
+      .select(
+        `
+        id, start_time, end_time, role_tag, status,
+        is_marketplace, profile_id,
+        profiles!shifts_profile_id_fkey ( full_name )
+      `,
+      )
+      .gte("start_time", dayStart)
+      .lte("start_time", dayEnd)
+      .neq("status", "cancelled")
+      .order("start_time", { ascending: true });
+
+    // Staff/azubi: chỉ xem ca của mình
+    if (!isManager) {
+      query = query.eq("profile_id", userId);
+    } else {
+      // Manager/owner: xem tất cả ca của location
+      query = query.eq("location_id", locationId);
+    }
+
+    const { data } = await query;
+
+    // Map vào ShiftData type
+    const mapped: ShiftData[] = (data ?? []).map(
+      (s: Record<string, unknown>) => {
+        const profiles = s.profiles as { full_name: string } | null;
+        return {
+          id: s.id as string,
+          start_time: s.start_time as string,
+          end_time: s.end_time as string,
+          role_tag: s.role_tag as string | null,
+          status: s.status as string,
+          is_marketplace: (s.is_marketplace as boolean) ?? false,
+          profile_id: s.profile_id as string | null,
+          profile_name: profiles?.full_name ?? null,
+          attendance_checkin: null,
+          attendance_checkout: null,
+        };
+      },
+    );
+
+    // Fetch attendance cho từng shift
+    if (mapped.length > 0) {
+      const shiftIds = mapped.map((s) => s.id);
+      const { data: attendances } = await supabase
+        .from("attendances")
+        .select("shift_id, checkin_at, checkout_at")
+        .in("shift_id", shiftIds);
+
+      if (attendances) {
+        const attMap = new Map(attendances.map((a) => [a.shift_id, a]));
+        mapped.forEach((s) => {
+          const att = attMap.get(s.id);
+          if (att) {
+            s.attendance_checkin = att.checkin_at;
+            s.attendance_checkout = att.checkout_at;
+          }
+        });
+      }
+    }
+
+    setShifts(mapped);
+    setLoading(false);
+  }, [userId, locationId, selectedDate, isManager]);
+
+  useEffect(() => {
+    fetchShifts();
+  }, [fetchShifts]);
+
+  // ── Fetch dots: ngày nào có ca trong tuần ────────────────
+  useEffect(() => {
+    if (!userId || !locationId) return;
+    const supabase = createClient();
+
+    // Lấy tuần từ T2–CN chứa selectedDate
+    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+
+    const wsISO = format(weekStart, "yyyy-MM-dd") + "T00:00:00";
+    const weISO = format(weekEnd, "yyyy-MM-dd") + "T23:59:59";
+
+    let query = supabase
+      .from("shifts")
+      .select("start_time")
+      .gte("start_time", wsISO)
+      .lte("start_time", weISO)
+      .neq("status", "cancelled");
+
+    if (!isManager) {
+      query = query.eq("profile_id", userId);
+    } else {
+      query = query.eq("location_id", locationId);
+    }
+
+    query.then(({ data }) => {
+      if (!data) return;
+      const uniqueDays = [
+        ...new Set(
+          data.map((s) => format(new Date(s.start_time), "yyyy-MM-dd")),
+        ),
+      ];
+      setDaysWithShifts(uniqueDays);
+    });
+  }, [userId, locationId, selectedDate, isManager]);
+
+  const bgColor = SCREEN_BG[locationId] ?? SCREEN_BG.enso;
+
+  const yearLabel = format(selectedDate, "yyyy");
 
   return (
-    <div className="min-h-dvh bg-background px-4 py-6">
-      <div className="mx-auto max-w-lg space-y-5">
-        {/* ── Header tuần ─────────────────────────────────── */}
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => setWeekOffset((w) => w - 1)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-foreground/10 text-foreground/60 transition hover:bg-foreground/5"
-            aria-label="Tuần trước"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-          </button>
+    <div style={{ background: bgColor, minHeight: "100dvh" }}>
+      {/* ── Page header ────────────────────────────────────── */}
+      <div
+        className="flex items-center justify-between bg-white border-b border-black/5"
+        style={{ padding: "14px 18px 10px" }}
+      >
+        <h1
+          style={{
+            fontFamily: "Sora, sans-serif",
+            fontSize: 17,
+            fontWeight: 700,
+            color: "#1a1a1a",
+          }}
+        >
+          Lịch làm việc
+        </h1>
 
-          <div className="text-center">
-            <p className="text-sm font-semibold text-foreground">{weekLabel}</p>
-            <p className="text-xs text-foreground/40">
-              {format(weekStart, "dd.MM")} – {format(weekEnd, "dd.MM.yyyy")}
-            </p>
-          </div>
-
+        {isManager ? (
           <button
-            type="button"
-            onClick={() => setWeekOffset((w) => w + 1)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-foreground/10 text-foreground/60 transition hover:bg-foreground/5"
-            aria-label="Tuần sau"
+            onClick={() => setModalOpen(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-[10px] text-white"
+            style={{ background: "var(--brand-color)" }}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m9 18 6-6-6-6" />
-            </svg>
+            <Plus size={18} strokeWidth={2.5} />
           </button>
-        </div>
-
-        {/* ── Nút về tuần hiện tại ─────────────────────────── */}
-        {weekOffset !== 0 && (
-          <button
-            type="button"
-            onClick={() => setWeekOffset(0)}
-            className="w-full rounded-lg border border-foreground/10 py-1.5 text-xs text-foreground/50 transition hover:bg-foreground/5"
+        ) : (
+          <span
+            style={{
+              fontSize: 11,
+              color: "#aaa",
+              fontWeight: 500,
+            }}
           >
-            Về tuần này
-          </button>
+            Tháng {format(selectedDate, "M")} · {yearLabel}
+          </span>
         )}
+      </div>
 
-        {/* ── Danh sách ngày ───────────────────────────────── */}
+      {/* ── Week strip ─────────────────────────────────────── */}
+      <WeekStrip
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+        daysWithShifts={daysWithShifts}
+      />
+
+      {/* ── Shift list ─────────────────────────────────────── */}
+      <div style={{ padding: 14 }} className="flex flex-col gap-2.5">
         {loading ? (
-          <div className="space-y-5">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <SkeletonDay key={i} />
+          // Skeleton 3 cards
+          <>
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="animate-pulse rounded-[18px] bg-white"
+                style={{
+                  height: 80,
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+                }}
+              />
             ))}
+          </>
+        ) : shifts.length === 0 ? (
+          // Empty state
+          <div className="flex flex-col items-center justify-center py-10 gap-2">
+            <span style={{ fontSize: 36 }}>🌿</span>
+            <p
+              style={{
+                fontSize: 13,
+                color: "#aaa",
+                fontWeight: 500,
+                textAlign: "center",
+              }}
+            >
+              {isManager ? "Chưa có ca nào" : "Hôm nay bạn không có ca"}
+            </p>
+            {isManager && (
+              <p
+                style={{
+                  fontSize: 11,
+                  color: "#ccc",
+                }}
+              >
+                Nhấn + để thêm ca mới
+              </p>
+            )}
           </div>
         ) : (
-          <div className="space-y-5">
-            {days.map((day) => {
-              const dayShifts = shiftsForDay(day);
-              const dayName = format(day, "EEEE", { locale: de });
-              const dayDate = format(day, "dd.MM");
-              const today = isToday(day);
-
-              return (
-                <div key={day.toISOString()} className="space-y-2">
-                  {/* Tên ngày */}
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="text-sm font-medium capitalize"
-                      style={{
-                        color: today ? "var(--brand-color)" : undefined,
-                      }}
-                    >
-                      {dayName}
-                    </span>
-                    <span className="text-xs text-foreground/40">
-                      {dayDate}
-                    </span>
-                    {today && (
-                      <span
-                        className="rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
-                        style={{ backgroundColor: "var(--brand-color)" }}
-                      >
-                        Hôm nay
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Ca làm */}
-                  {dayShifts.length === 0 ? (
-                    <p className="text-sm text-foreground/30 pl-1">
-                      Không có ca
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {dayShifts.map((shift) => (
-                        <ShiftCard key={shift.id} shift={shift} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          shifts.map((shift) => <ShiftCard key={shift.id} shift={shift} />)
         )}
       </div>
-    </div>
-  );
-}
 
-// ── ShiftCard ────────────────────────────────────────────────
-function ShiftCard({ shift }: { shift: Shift }) {
-  const start = new Date(shift.start_time);
-  const end = new Date(shift.end_time);
-  const startStr = format(start, "HH:mm");
-  const endStr = format(end, "HH:mm");
-  const roleLabel = shift.role_tag
-    ? (ROLE_TAG_LABELS[shift.role_tag] ?? shift.role_tag)
-    : null;
-
-  const isCancelled = shift.status === "cancelled";
-
-  return (
-    <div
-      className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
-        isCancelled
-          ? "border-foreground/8 opacity-40"
-          : "border-foreground/10 bg-background"
-      }`}
-    >
-      {/* Giờ */}
-      <div className="flex items-center gap-3">
-        <div
-          className="h-8 w-1 rounded-full"
+      {/* ── FAB (manager/owner) ────────────────────────────── */}
+      {isManager && !modalOpen && (
+        <button
+          onClick={() => setModalOpen(true)}
+          className="fixed z-10 flex items-center justify-center rounded-[14px] text-white"
           style={{
-            backgroundColor: isCancelled ? undefined : "var(--brand-color)",
-            opacity: isCancelled ? 0.3 : 1,
+            bottom: 90,
+            right: 16,
+            width: 44,
+            height: 44,
+            background: "var(--brand-color)",
+            boxShadow: "0 6px 20px rgba(0,0,0,0.2)",
           }}
-        />
-        <div>
-          <p className="text-sm font-semibold text-foreground">
-            {startStr} – {endStr}
-          </p>
-          {roleLabel && (
-            <p className="text-xs text-foreground/50">{roleLabel}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Status badge */}
-      {isCancelled && (
-        <span className="rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] text-foreground/50">
-          Hủy
-        </span>
+        >
+          <Plus size={22} strokeWidth={2.5} />
+        </button>
       )}
+
+      {/* ── New Shift Modal ────────────────────────────────── */}
+      <NewShiftModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onCreated={fetchShifts}
+        locationId={locationId}
+        defaultDate={format(selectedDate, "yyyy-MM-dd")}
+      />
     </div>
   );
 }
