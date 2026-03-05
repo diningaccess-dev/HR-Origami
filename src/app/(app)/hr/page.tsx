@@ -1,9 +1,11 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import SignOutButton from "@/app/(app)/hr/SignOutButton";
 
-// ── Label helpers ────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────
 const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
   manager: "Manager",
@@ -21,6 +23,42 @@ const BRAND_COLORS: Record<string, string> = {
   enso: "#2D6A4F",
   origami: "#8B7355",
   okyu: "#C62828",
+};
+
+const BRAND_DARK: Record<string, string> = {
+  enso: "#1B4332",
+  origami: "#6B5A45",
+  okyu: "#8E0000",
+};
+
+const BRAND_LIGHT: Record<string, string> = {
+  enso: "#D8F3DC",
+  origami: "#F5EFE6",
+  okyu: "#FFEBEE",
+};
+
+const SCREEN_BG: Record<string, string> = {
+  enso: "#f4f7f5",
+  origami: "#faf6f2",
+  okyu: "#fdf4f4",
+};
+
+// ── Menu config ────────────────────────────────────────────
+type MenuItem = {
+  emoji: string;
+  iconBg: string;
+  title: string;
+  subtitle?: string;
+  href: string;
+  badgeType?: "red" | "yellow" | "green";
+  badgeValue?: string | number;
+};
+
+type MenuGroup = {
+  label: string;
+  labelColor?: string;
+  borderColor?: string;
+  items: MenuItem[];
 };
 
 export default async function HrPage() {
@@ -46,20 +84,20 @@ export default async function HrPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, email, role, location_id, hired_at, avatar_url")
+    .select("full_name, email, role, location_id, avatar_url")
     .eq("id", user.id)
     .single();
 
-  const name = profile?.full_name ?? "—";
-  const email = profile?.email ?? user.email ?? "—";
+  const name = profile?.full_name ?? "User";
+  const email = profile?.email ?? user.email ?? "";
   const role = profile?.role ?? "staff";
   const locationId = profile?.location_id ?? "enso";
-  const hiredAt = profile?.hired_at;
-  const avatarUrl = profile?.avatar_url;
 
   const brandColor = BRAND_COLORS[locationId] ?? BRAND_COLORS.enso;
+  const brandDark = BRAND_DARK[locationId] ?? BRAND_DARK.enso;
+  const brandLight = BRAND_LIGHT[locationId] ?? BRAND_LIGHT.enso;
+  const bgColor = SCREEN_BG[locationId] ?? SCREEN_BG.enso;
 
-  // Chữ cái đầu để làm avatar fallback
   const initials = name
     .split(" ")
     .map((w: string) => w[0])
@@ -67,80 +105,370 @@ export default async function HrPage() {
     .join("")
     .toUpperCase();
 
-  // Format ngày kiểu DE
-  const formattedDate = hiredAt
-    ? new Date(hiredAt).toLocaleDateString("de-DE", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })
-    : "—";
+  const isAzubi = role === "azubi";
+  const isManager = role === "manager" || role === "owner";
+  const isOwner = role === "owner";
+
+  // ── Badges: giấy tờ sắp hết hạn (≤ 30 ngày) ─────────
+  const thirtyDaysLater = new Date();
+  thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
+  const { count: expiringDocs } = await supabase
+    .from("documents")
+    .select("*", { count: "exact", head: true })
+    .eq("profile_id", user.id)
+    .lte("expires_at", thirtyDaysLater.toISOString())
+    .gte("expires_at", new Date().toISOString());
+
+  // ── Badge: pending profiles (manager/owner) ────────────
+  let pendingCount = 0;
+  if (isManager) {
+    const { count } = await supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("location_id", locationId)
+      .eq("status", "pending");
+    pendingCount = count ?? 0;
+  }
+
+  // ── Build menu groups ──────────────────────────────────
+  const groups: MenuGroup[] = [];
+
+  // Azubi: nhóm Học tập (nổi bật, hiện trước)
+  if (isAzubi) {
+    groups.push({
+      label: "Học tập ✨",
+      labelColor: brandColor,
+      borderColor: brandLight,
+      items: [
+        {
+          emoji: "📚",
+          iconBg: brandLight,
+          title: "Studyhub",
+          subtitle: "Khóa học & bài thi",
+          href: "/studyhub",
+        },
+        {
+          emoji: "🏆",
+          iconBg: "#fef9c3",
+          title: "Leaderboard XP",
+          subtitle: "Xem xếp hạng",
+          href: "/studyhub/leaderboard",
+        },
+        {
+          emoji: "🤖",
+          iconBg: "#ede9fe",
+          title: "AI Colleague",
+          subtitle: "Hỏi đáp 24/7",
+          href: "/ai",
+        },
+      ],
+    });
+  }
+
+  // Tất cả role: nhóm Cá nhân
+  groups.push({
+    label: "Cá nhân",
+    items: [
+      {
+        emoji: "😷",
+        iconBg: "#fef3c7",
+        title: "Báo ốm",
+        subtitle: "Xin nghỉ & gửi AU",
+        href: "/hr/sick-report",
+      },
+      {
+        emoji: "📄",
+        iconBg: "#e0f2fe",
+        title: "Giấy tờ",
+        subtitle: expiringDocs
+          ? `Hợp đồng hết hạn ${expiringDocs} ngày`
+          : "Hợp đồng & giấy tờ",
+        href: "/hr/documents",
+        ...(expiringDocs && expiringDocs > 0
+          ? { badgeType: "yellow" as const, badgeValue: "!" }
+          : {}),
+      },
+      {
+        emoji: "🔒",
+        iconBg: "#ede9fe",
+        title: "Đổi mật khẩu",
+        href: "/hr/change-password",
+      },
+      {
+        emoji: "🚨",
+        iconBg: "#f3f4f6",
+        title: "Tố cáo ẩn danh",
+        subtitle: "Hoàn toàn bảo mật",
+        href: "/hr/whistleblower",
+      },
+    ],
+  });
+
+  // Manager/Owner: nhóm Quản lý
+  if (isManager) {
+    groups.push({
+      label: "Quản lý",
+      items: [
+        {
+          emoji: "👥",
+          iconBg: "#fee2e2",
+          title: "Duyệt tài khoản",
+          subtitle:
+            pendingCount > 0
+              ? `${pendingCount} đang chờ duyệt`
+              : "Không có yêu cầu mới",
+          href: "/admin/approval",
+          ...(pendingCount > 0
+            ? { badgeType: "red" as const, badgeValue: pendingCount }
+            : {}),
+        },
+        {
+          emoji: "📢",
+          iconBg: "#fef3c7",
+          title: "Thông báo",
+          subtitle: "Gửi thông báo toàn quán",
+          href: "/admin/announcements",
+        },
+        {
+          emoji: "💰",
+          iconBg: "#d1fae5",
+          title: "Tip Pool",
+          subtitle: "Chia tip cho nhân viên",
+          href: "/finance/tip-pool",
+        },
+      ],
+    });
+  }
+
+  // Owner: nhóm Hệ thống
+  if (isOwner) {
+    groups.push({
+      label: "Hệ thống",
+      items: [
+        {
+          emoji: "📋",
+          iconBg: "#e0f2fe",
+          title: "Báo cáo tổng hợp",
+          subtitle: "Doanh thu & hiệu suất",
+          href: "/admin/reports",
+        },
+        {
+          emoji: "🚨",
+          iconBg: "#fee2e2",
+          title: "Tố cáo (xem)",
+          subtitle: "Xem đơn tố cáo ẩn danh",
+          href: "/admin/whistleblower",
+        },
+      ],
+    });
+  }
+
+  const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
+    red: { bg: "#ef4444", color: "#fff" },
+    yellow: { bg: "#d97706", color: "#fff" },
+    green: { bg: brandColor, color: "#fff" },
+  };
 
   return (
-    <div className="min-h-dvh bg-background px-4 py-6">
-      <div className="mx-auto max-w-sm space-y-6">
-        {/* ── Header ────────────────────────────────────────── */}
-        <h1 className="text-xl font-semibold text-foreground">Hồ sơ</h1>
+    <div style={{ background: bgColor, minHeight: "100dvh" }}>
+      {/* ── Hero gradient ────────────────────────────────── */}
+      <div
+        className="relative overflow-hidden flex flex-col items-center gap-1.5"
+        style={{
+          background: `linear-gradient(135deg, ${brandDark} 0%, ${brandColor} 60%, ${brandColor}99 100%)`,
+          padding: "20px 16px 28px",
+        }}
+      >
+        {/* Gradient fade bottom */}
+        <div
+          className="absolute bottom-0 left-0 right-0"
+          style={{
+            height: 32,
+            background: `linear-gradient(to bottom, transparent, ${bgColor})`,
+          }}
+        />
 
-        {/* ── Avatar + tên + email ───────────────────────────── */}
-        <div className="flex flex-col items-center gap-3 py-4">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatarUrl}
-              alt={name}
-              width={80}
-              height={80}
-              className="h-20 w-20 rounded-full object-cover"
-            />
-          ) : (
-            <div
-              className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-semibold text-white"
-              style={{ backgroundColor: brandColor }}
-            >
-              {initials}
-            </div>
-          )}
-          <div className="text-center">
-            <p className="text-lg font-semibold text-foreground">{name}</p>
-            <p className="text-sm text-foreground/50">{email}</p>
-          </div>
+        {/* Avatar */}
+        <div
+          className="flex items-center justify-center"
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: 20,
+            background: brandLight,
+            color: brandColor,
+            fontSize: 28,
+            border: "3px solid rgba(255,255,255,0.4)",
+            boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
+          }}
+        >
+          {initials}
         </div>
 
-        {/* ── Thông tin chi tiết ─────────────────────────────── */}
-        <div className="divide-y divide-foreground/8 rounded-xl border border-foreground/10 bg-background">
-          <Row label="Role" value={ROLE_LABELS[role] ?? role} />
-          <Row
-            label="Quán"
-            value={LOCATION_LABELS[locationId] ?? locationId}
-            valueStyle={{ color: brandColor }}
-          />
-          <Row label="Ngày vào làm" value={formattedDate} />
-        </div>
+        {/* Name */}
+        <p
+          style={{
+            fontFamily: "Sora, sans-serif",
+            fontSize: 16,
+            fontWeight: 700,
+            color: "#fff",
+          }}
+        >
+          {name}
+        </p>
 
-        {/* ── Đăng xuất ─────────────────────────────────────── */}
-        <SignOutButton />
+        {/* Email */}
+        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.75)" }}>{email}</p>
+
+        {/* Chips */}
+        <div className="flex gap-1.5 mt-0.5">
+          <span
+            className="rounded-full"
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              padding: "3px 10px",
+              background: "rgba(255,255,255,0.2)",
+              color: "#fff",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            {ROLE_LABELS[role] ?? role}
+          </span>
+          <span
+            className="rounded-full"
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              padding: "3px 10px",
+              background: "rgba(255,255,255,0.2)",
+              color: "#fff",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            {LOCATION_LABELS[locationId] ?? locationId}
+          </span>
+        </div>
       </div>
-    </div>
-  );
-}
 
-// ── Row component ─────────────────────────────────────────────
-function Row({
-  label,
-  value,
-  valueStyle,
-}: {
-  label: string;
-  value: string;
-  valueStyle?: React.CSSProperties;
-}) {
-  return (
-    <div className="flex items-center justify-between px-4 py-3">
-      <span className="text-sm text-foreground/50">{label}</span>
-      <span className="text-sm font-medium text-foreground" style={valueStyle}>
-        {value}
-      </span>
+      {/* ── Menu sections ────────────────────────────────── */}
+      <div
+        className="flex flex-col gap-1.5"
+        style={{ padding: "0 12px", marginTop: -10 }}
+      >
+        {groups.map((group, gi) => (
+          <div key={gi}>
+            {/* Section label */}
+            <p
+              className="px-1 mb-1"
+              style={{
+                fontFamily: "Sora, sans-serif",
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: group.labelColor ?? "#bbb",
+                marginTop: gi > 0 ? 6 : 4,
+              }}
+            >
+              {group.label}
+            </p>
+
+            {/* Group card */}
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                background: "#fff",
+                boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
+                border: group.borderColor
+                  ? `1px solid ${group.borderColor}`
+                  : "none",
+              }}
+            >
+              {group.items.map((item, ii) => (
+                <Link
+                  key={ii}
+                  href={item.href}
+                  className="flex items-center gap-2.5 cursor-pointer"
+                  style={{
+                    padding: "11px 14px",
+                    borderBottom:
+                      ii < group.items.length - 1
+                        ? "1px solid rgba(0,0,0,0.04)"
+                        : "none",
+                  }}
+                >
+                  {/* Icon */}
+                  <div
+                    className="flex shrink-0 items-center justify-center rounded-[10px]"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      fontSize: 15,
+                      background: item.iconBg,
+                    }}
+                  >
+                    {item.emoji}
+                  </div>
+
+                  {/* Text */}
+                  <div className="flex-1 min-w-0">
+                    <p
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#1a1a1a",
+                      }}
+                    >
+                      {item.title}
+                    </p>
+                    {item.subtitle && (
+                      <p
+                        style={{
+                          fontSize: 10,
+                          color: "#aaa",
+                          marginTop: 1,
+                        }}
+                      >
+                        {item.subtitle}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Badge */}
+                  {item.badgeType && item.badgeValue !== undefined && (
+                    <span
+                      className="rounded-full"
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        padding: "2px 7px",
+                        fontFamily: "Sora, sans-serif",
+                        background: BADGE_STYLES[item.badgeType].bg,
+                        color: BADGE_STYLES[item.badgeType].color,
+                      }}
+                    >
+                      {item.badgeValue}
+                    </span>
+                  )}
+
+                  {/* Arrow */}
+                  <ChevronRight size={14} strokeWidth={2} color="#ddd" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* ── Logout ─────────────────────────────────────── */}
+        <div style={{ padding: "8px 0 4px" }}>
+          <SignOutButton />
+        </div>
+
+        <div className="h-4" />
+      </div>
     </div>
   );
 }
