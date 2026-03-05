@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { X, Plus } from "lucide-react";
@@ -39,6 +39,12 @@ export default function CreateChannelModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus input khi mở modal
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 200);
+  }, [open]);
 
   async function handleCreate() {
     const trimmed = name.trim();
@@ -98,9 +104,11 @@ export default function CreateChannelModal({
             style={{
               padding: "16px 16px 24px",
               paddingBottom: "calc(24px + env(safe-area-inset-bottom))",
+              animation: "slideUp 250ms ease-out",
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <h2
@@ -132,6 +140,7 @@ export default function CreateChannelModal({
                 Tên kênh
               </label>
               <input
+                ref={inputRef}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ví dụ: Bếp Enso, Thông báo..."

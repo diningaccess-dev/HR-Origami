@@ -161,8 +161,11 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
         return (
           <button
             key={tab.key}
-            onClick={() => router.push(tab.href)}
-            className="flex flex-col items-center justify-center gap-[3px] py-2"
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: "instant" });
+              router.push(tab.href);
+            }}
+            className="flex flex-col items-center justify-center gap-[3px] py-2 transition-transform duration-100 active:scale-[0.93]"
           >
             {/* Icon + badge */}
             <div className="relative flex items-center justify-center w-7 h-7">

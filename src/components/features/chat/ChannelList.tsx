@@ -83,10 +83,11 @@ export default function ChannelList({
           <Link
             key={ch.id}
             href={`/chat/${ch.id}`}
-            className="flex items-center gap-2.5 rounded-[14px] bg-white cursor-pointer"
+            className="flex items-center gap-2.5 rounded-2xl bg-white cursor-pointer transition-transform duration-100 active:scale-[0.98]"
             style={{
               padding: "10px 12px",
               boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
+              fontFamily: "DM Sans, sans-serif",
             }}
           >
             {/* Avatar */}

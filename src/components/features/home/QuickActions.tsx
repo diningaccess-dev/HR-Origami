@@ -242,7 +242,7 @@ export default function QuickActions({ role, locationId }: QuickActionsProps) {
               <button
                 key={action.key}
                 onClick={() => router.push(action.href)}
-                className="flex flex-col items-center gap-[5px]"
+                className="flex flex-col items-center gap-[5px] transition-transform duration-100 active:scale-[0.95]"
               >
                 <div
                   className="relative flex items-center justify-center rounded-2xl"

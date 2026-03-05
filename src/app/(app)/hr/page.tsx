@@ -391,7 +391,7 @@ export default async function HrPage() {
                 <Link
                   key={ii}
                   href={item.href}
-                  className="flex items-center gap-2.5 cursor-pointer"
+                  className="flex items-center gap-2.5 cursor-pointer transition-transform duration-100 active:scale-[0.98]"
                   style={{
                     padding: "11px 14px",
                     borderBottom:

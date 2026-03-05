@@ -177,6 +177,9 @@ export default function ChatWindow({
     setSending(true);
     setInput("");
 
+    // Haptic feedback (PWA mobile)
+    if ("vibrate" in navigator) navigator.vibrate(8);
+
     // Optimistic update
     const optimisticId = crypto.randomUUID();
     const optimisticMsg: Message = {
