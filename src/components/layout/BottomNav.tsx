@@ -1,19 +1,17 @@
 ﻿"use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   Home,
   Calendar,
+  MessageCircle,
   BookOpen,
-  ClipboardList,
-  CircleDollarSign,
   UserCheck,
   User,
 } from "lucide-react";
 
-// -- Types
 type TabItem = {
   key: string;
   label: string;
@@ -22,75 +20,6 @@ type TabItem = {
   badge?: number;
 };
 
-// -- Tab bổ sung theo role
-// Thứ tự: Home → Lịch → [extra theo role] → Hồ sơ
-const ROLE_EXTRA: Record<string, Omit<TabItem, "badge">[]> = {
-  azubi: [
-    { key: "studyhub", label: "Học", href: "/studyhub", icon: BookOpen },
-    {
-      key: "checklist",
-      label: "Checklist",
-      href: "/checklist",
-      icon: ClipboardList,
-    },
-  ],
-  staff: [
-    {
-      key: "checklist",
-      label: "Checklist",
-      href: "/checklist",
-      icon: ClipboardList,
-    },
-    {
-      key: "tip",
-      label: "Tip",
-      href: "/finance/tip-pool",
-      icon: CircleDollarSign,
-    },
-  ],
-  manager: [
-    {
-      key: "checklist",
-      label: "Checklist",
-      href: "/checklist",
-      icon: ClipboardList,
-    },
-    {
-      key: "tip",
-      label: "Tip",
-      href: "/finance/tip-pool",
-      icon: CircleDollarSign,
-    },
-    {
-      key: "approval",
-      label: "Duyệt",
-      href: "/admin/approval",
-      icon: UserCheck,
-    },
-  ],
-  owner: [
-    {
-      key: "checklist",
-      label: "Checklist",
-      href: "/checklist",
-      icon: ClipboardList,
-    },
-    {
-      key: "tip",
-      label: "Tip",
-      href: "/finance/tip-pool",
-      icon: CircleDollarSign,
-    },
-    {
-      key: "approval",
-      label: "Duyệt",
-      href: "/admin/approval",
-      icon: UserCheck,
-    },
-  ],
-};
-
-// -- Component
 type BottomNavProps = {
   role: string;
   locationId: string;
@@ -100,34 +29,54 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  // -- Badge: đếm pending profiles (chỉ manager/owner)
+  // ── Badge: đếm pending profiles (chỉ manager/owner) ────
   const [pendingCount, setPendingCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const fetchPending = useCallback(async () => {
-    if (!["manager", "owner"].includes(role)) return;
+  const isManager = role === "manager" || role === "owner";
+
+  const fetchBadges = useCallback(async () => {
     try {
       const supabase = createClient();
-      const { count } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "pending")
-        .eq("location_id", locationId);
-      setPendingCount(count ?? 0);
+
+      // Pending profiles (manager/owner)
+      if (isManager) {
+        const { count } = await supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "pending")
+          .eq("location_id", locationId);
+        setPendingCount(count ?? 0);
+      }
+
+      // Unread messages (tất cả role)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from("messages")
+          .select("id, read_by")
+          .not("read_by", "cs", `{${user.id}}`);
+        setUnreadCount(
+          (data ?? []).filter(
+            (m) => !Array.isArray(m.read_by) || !m.read_by.includes(user.id),
+          ).length,
+        );
+      }
     } catch {
       /* silent */
     }
-  }, [role, locationId]);
+  }, [isManager, locationId]);
 
-  // Poll mỗi 30 giây
   useEffect(() => {
-    fetchPending();
-    if (!["manager", "owner"].includes(role)) return;
-    const interval = setInterval(fetchPending, 30_000);
+    fetchBadges();
+    const interval = setInterval(fetchBadges, 15_000);
     return () => clearInterval(interval);
-  }, [fetchPending, role]);
+  }, [fetchBadges]);
 
-  // -- Ghép tabs: Home → Lịch → [extra] → Hồ sơ
-  const tabs: TabItem[] = useMemo(() => {
+  // ── Build tab list theo role ──────────────────────────────
+  const buildTabs = (): TabItem[] => {
     const home: TabItem = {
       key: "home",
       label: "Home",
@@ -140,96 +89,106 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
       href: "/schedule",
       icon: Calendar,
     };
-    const hr: TabItem = { key: "hr", label: "Hồ sơ", href: "/hr", icon: User };
+    const chat: TabItem = {
+      key: "chat",
+      label: "Chat",
+      href: "/chat",
+      icon: MessageCircle,
+      badge: unreadCount,
+    };
+    const studyhub: TabItem = {
+      key: "studyhub",
+      label: "Học",
+      href: "/studyhub",
+      icon: BookOpen,
+    };
+    const approval: TabItem = {
+      key: "approval",
+      label: "Duyệt",
+      href: "/admin/approval",
+      icon: UserCheck,
+      badge: pendingCount,
+    };
+    const hr: TabItem = {
+      key: "hr",
+      label: "Hồ sơ",
+      href: "/hr",
+      icon: User,
+    };
 
-    const extra: TabItem[] = (ROLE_EXTRA[role] ?? []).map((t) => ({
-      ...t,
-      badge:
-        t.key === "approval" && pendingCount > 0 ? pendingCount : undefined,
-    }));
+    switch (role) {
+      case "azubi":
+        return [home, schedule, chat, studyhub, hr]; // 5 tab
+      case "manager":
+      case "owner":
+        return [home, schedule, chat, approval, hr]; // 5 tab
+      default: // staff
+        return [home, schedule, chat, hr]; // 4 tab
+    }
+  };
 
-    return [home, schedule, ...extra, hr];
-  }, [role, pendingCount]);
+  const tabs = buildTabs();
+  const cols = tabs.length; // 4 hoặc 5
 
-  // -- Layout theo số tab
-  const is6 = tabs.length === 6;
-  const gridClass = is6 ? "grid-cols-6" : "grid-cols-5";
-  const iconSize = is6 ? 20 : 22;
-
-  // Pill width: nhỏ hơn khi nhiều tab
-  const pillW = is6 ? 36 : 40;
-  const pillActiveW = is6 ? 44 : 48;
-
-  // -- Active detection
   const isActive = (href: string) => {
     if (href === "/home") return pathname === "/home";
     return pathname.startsWith(href);
   };
 
+  // Màu quán từ CSS variable (set bởi layout)
+  const brandColor = "var(--brand-color)";
+
   return (
     <nav
-      className={`fixed bottom-0 left-0 right-0 z-50 grid ${gridClass} bg-white border-t border-black/[0.06]`}
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white"
       style={{
-        padding: "8px 4px calc(10px + env(safe-area-inset-bottom, 0px))",
-        boxShadow: "0 -4px 20px rgba(0,0,0,0.05)",
+        display: "grid",
+        gridTemplateColumns: `repeat(${cols}, 1fr)`,
+        paddingBottom: "env(safe-area-inset-bottom)",
+        borderTop: "1px solid rgba(0,0,0,0.06)",
+        boxShadow: "0 -1px 0 rgba(0,0,0,0.04), 0 -4px 16px rgba(0,0,0,0.04)",
       }}
     >
       {tabs.map((tab) => {
         const active = isActive(tab.href);
-        const IconComponent = tab.icon;
-        const badge = tab.badge;
+        const Icon = tab.icon;
+        // Icon nhỏ hơn khi 5 tab
+        const iconSize = cols === 5 ? 20 : 22;
 
         return (
           <button
             key={tab.key}
             onClick={() => router.push(tab.href)}
-            className="flex flex-col items-center justify-center gap-[3px]"
+            className="flex flex-col items-center justify-center gap-[3px] py-2"
           >
-            {/* Nav Pill — nền brand 10% khi active */}
-            <div
-              className="relative flex items-center justify-center h-7 rounded-full transition-all duration-200"
-              style={{
-                width: active ? pillActiveW : pillW,
-                background: active
-                  ? "color-mix(in srgb, var(--brand-color) 10%, transparent)"
-                  : "transparent",
-              }}
-            >
-              <IconComponent
+            {/* Icon + badge */}
+            <div className="relative flex items-center justify-center w-7 h-7">
+              <Icon
                 size={iconSize}
                 strokeWidth={1.5}
-                style={{
-                  color: active ? "var(--brand-color)" : "#c0c8d0",
-                }}
-                className="transition-colors duration-200"
+                style={{ stroke: active ? brandColor : "#9ca3af" }}
               />
-              {/* Badge đỏ góc icon */}
-              {badge !== undefined && badge > 0 && (
+              {/* Badge */}
+              {tab.badge != null && tab.badge > 0 && (
                 <span
-                  className="absolute flex items-center justify-center rounded-full bg-red-500 text-white font-bold"
-                  style={{
-                    top: -2,
-                    right: -2,
-                    width: 14,
-                    height: 14,
-                    fontSize: 8,
-                    border: "2px solid #fff",
-                  }}
+                  className="absolute -top-1 -right-1.5 flex items-center justify-center
+                             w-[14px] h-[14px] rounded-full bg-red-500 text-white
+                             text-[8px] font-bold border-[1.5px] border-white"
                 >
-                  {badge > 9 ? "9+" : badge}
+                  {tab.badge > 9 ? "9+" : tab.badge}
                 </span>
               )}
             </div>
 
-            {/* Label — chỉ hiện khi active */}
+            {/* Label — chỉ active mới hiện */}
             <span
-              className="leading-none whitespace-nowrap transition-opacity duration-200"
+              className="text-[10px] font-semibold leading-none tracking-wide"
               style={{
-                fontSize: 9,
-                fontWeight: 700,
                 fontFamily: "Sora, sans-serif",
-                color: active ? "var(--brand-color)" : "transparent",
-                opacity: active ? 1 : 0,
+                color: active ? brandColor : "transparent",
+                height: active ? "auto" : "0",
+                overflow: "hidden",
+                transition: "color 0.15s",
               }}
             >
               {tab.label}
