@@ -63,19 +63,25 @@ export default async function ChatPage() {
     // Tin nhắn mới nhất
     const { data: lastMsg } = await supabase
       .from("messages")
-      .select("body, created_at, profiles!messages_sender_id_fkey(full_name)")
+      .select("body, created_at, profiles!sender_id(full_name)")
       .eq("channel_id", ch.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    // Đếm unread (tin nhắn mà user chưa đọc)
-    const { count: unreadCount } = await supabase
-      .from("messages")
-      .select("*", { count: "exact", head: true })
-      .eq("channel_id", ch.id)
-      .neq("sender_id", user.id)
-      .not("read_by", "cs", `{${user.id}}`);
+    // Đếm unread — silent fail nếu lỗi
+    let unreadCount = 0;
+    try {
+      const { count } = await supabase
+        .from("messages")
+        .select("*", { count: "exact", head: true })
+        .eq("channel_id", ch.id)
+        .neq("sender_id", user.id)
+        .not("read_by", "cs", `{${user.id}}`);
+      unreadCount = count ?? 0;
+    } catch {
+      // read_by column có thể không tồn tại
+    }
 
     const senderProfile = lastMsg?.profiles as unknown as {
       full_name: string;
@@ -88,7 +94,7 @@ export default async function ChatPage() {
       last_message_body: (lastMsg?.body as string) ?? null,
       last_message_sender: senderProfile?.full_name ?? null,
       last_message_at: (lastMsg?.created_at as string) ?? null,
-      unread_count: unreadCount ?? 0,
+      unread_count: unreadCount,
     });
   }
 
