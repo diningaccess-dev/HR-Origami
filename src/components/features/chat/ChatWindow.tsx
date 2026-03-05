@@ -13,7 +13,7 @@ type Message = {
   sender_id: string;
   body: string;
   is_urgent: boolean;
-  read_by: string[];
+  read_by: unknown[];
   created_at: string;
   sender_name?: string;
 };
@@ -247,7 +247,11 @@ export default function ChatWindow({
         className="flex items-center gap-2.5 bg-white border-b border-black/5 shrink-0"
         style={{ padding: "10px 14px" }}
       >
-        <button onClick={() => router.push("/chat")} className="text-gray-500">
+        <button
+          onClick={() => router.push("/chat")}
+          className="flex items-center justify-center text-gray-500"
+          style={{ width: 44, height: 44, marginLeft: -10 }}
+        >
           <ArrowLeft size={20} strokeWidth={2} />
         </button>
         <div>
@@ -407,7 +411,10 @@ export default function ChatWindow({
       {/* ── Input bar ──────────────────────────────────────── */}
       <div
         className="flex items-center gap-2 bg-white border-t border-black/5 shrink-0"
-        style={{ padding: "8px 12px 10px" }}
+        style={{
+          padding: "8px 12px",
+          paddingBottom: "calc(8px + env(safe-area-inset-bottom))",
+        }}
       >
         <textarea
           value={input}
@@ -419,8 +426,8 @@ export default function ChatWindow({
           style={{
             background: "#f4f4f4",
             borderRadius: 20,
-            padding: "8px 14px",
-            fontSize: 11,
+            padding: "10px 14px",
+            fontSize: 13,
             color: "#555",
             fontFamily: "DM Sans, sans-serif",
             maxHeight: 80,
@@ -429,14 +436,14 @@ export default function ChatWindow({
         <button
           onClick={() => handleSend()}
           disabled={!input.trim() || sending}
-          className="flex items-center justify-center rounded-[10px] text-white disabled:opacity-40"
+          className="flex items-center justify-center rounded-xl text-white disabled:opacity-40"
           style={{
-            width: 32,
-            height: 32,
+            width: 44,
+            height: 44,
             background: "var(--brand-color)",
           }}
         >
-          <Send size={14} strokeWidth={2} />
+          <Send size={16} strokeWidth={2} />
         </button>
       </div>
     </div>

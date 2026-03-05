@@ -181,7 +181,7 @@ export default async function HrPage() {
         iconBg: "#e0f2fe",
         title: "Giấy tờ",
         subtitle: expiringDocs
-          ? `Hợp đồng hết hạn ${expiringDocs} ngày`
+          ? `${expiringDocs} giấy tờ sắp hết hạn`
           : "Hợp đồng & giấy tờ",
         href: "/hr/documents",
         ...(expiringDocs && expiringDocs > 0

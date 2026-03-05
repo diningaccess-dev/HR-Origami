@@ -58,7 +58,8 @@ export default function CreateChannelModal({
     });
 
     if (insertError) {
-      setError(insertError.message);
+      setError("Không thể tạo kênh. Thử lại sau.");
+      console.error(insertError);
       setSaving(false);
       return;
     }
@@ -75,20 +76,20 @@ export default function CreateChannelModal({
       {/* FAB button */}
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center justify-center rounded-[10px] text-white"
+        className="flex items-center justify-center rounded-xl text-white"
         style={{
-          width: 28,
-          height: 28,
+          width: 44,
+          height: 44,
           background: "var(--brand-color)",
         }}
       >
-        <Plus size={16} strokeWidth={2} />
+        <Plus size={18} strokeWidth={2} />
       </button>
 
       {/* Modal overlay */}
       {open && (
         <div
-          className="fixed inset-0 z-[100] flex items-end justify-center"
+          className="fixed inset-0 z-100 flex items-end justify-center"
           style={{ background: "rgba(0,0,0,0.4)" }}
           onClick={() => setOpen(false)}
         >

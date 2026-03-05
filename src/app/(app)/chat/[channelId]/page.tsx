@@ -65,7 +65,7 @@ export default async function ChatChannelPage({
   return (
     <div
       className="flex flex-col"
-      style={{ background: bgColor, height: "calc(100dvh - 5rem)" }}
+      style={{ background: bgColor, height: "100dvh" }}
     >
       <ChatWindow
         channelId={channel.id}
