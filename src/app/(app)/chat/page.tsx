@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
 import ChannelList from "@/components/features/chat/ChannelList";
+import CreateChannelModal from "@/components/features/chat/CreateChannelModal";
 import type { ChannelWithPreview } from "@/components/features/chat/ChannelList";
 
 // Background surface theo quán
@@ -45,9 +46,11 @@ export default async function ChatPage() {
     .eq("id", user.id)
     .single();
 
+  const role = profile?.role ?? "staff";
   const locationId = profile?.location_id ?? "enso";
   const locationLabel = LOCATION_LABELS[locationId] ?? locationId;
   const bgColor = SCREEN_BG[locationId] ?? SCREEN_BG.enso;
+  const isManager = role === "manager" || role === "owner";
 
   // ── Channels với preview ─────────────────────────────────
   const { data: channels } = await supabase
@@ -116,9 +119,12 @@ export default async function ChatPage() {
           >
             Chat
           </h1>
-          <span style={{ fontSize: 10, color: "#aaa", fontWeight: 600 }}>
-            {channelsWithPreview.length} kênh
-          </span>
+          <div className="flex items-center gap-2">
+            <span style={{ fontSize: 10, color: "#aaa", fontWeight: 600 }}>
+              {channelsWithPreview.length} kênh
+            </span>
+            {isManager && <CreateChannelModal locationId={locationId} />}
+          </div>
         </div>
       </div>
 
