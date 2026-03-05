@@ -30,7 +30,6 @@ type ChatWindowProps = {
 export default function ChatWindow({
   channelId,
   channelName,
-  channelType,
   memberCount,
   currentUserId,
   currentUserName,
@@ -41,9 +40,10 @@ export default function ChatWindow({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const channelRef = useRef<RealtimeChannel | null>(null);
+  const realtimeRef = useRef<RealtimeChannel | null>(null);
 
-  const supabase = createClient();
+  // Stable supabase ref — tránh re-create mỗi render
+  const supabaseRef = useRef(createClient());
 
   // ── Scroll xuống cuối ──────────────────────────────────
   const scrollToBottom = useCallback(() => {
@@ -53,18 +53,25 @@ export default function ChatWindow({
   // ── Load messages ban đầu ──────────────────────────────
   useEffect(() => {
     let ignore = false;
+    const supabase = supabaseRef.current;
 
     async function load() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("messages")
         .select(
-          "id, channel_id, sender_id, body, is_urgent, read_by, created_at, profiles!messages_sender_id_fkey(full_name)",
+          "id, channel_id, sender_id, body, is_urgent, read_by, created_at, profiles!sender_id(full_name)",
         )
         .eq("channel_id", channelId)
         .order("created_at", { ascending: true })
         .limit(100);
 
       if (ignore) return;
+
+      if (error) {
+        console.error("Lỗi load messages:", error);
+        setLoading(false);
+        return;
+      }
 
       const mapped: Message[] = (data ?? []).map(
         (m: Record<string, unknown>) => {
@@ -86,14 +93,14 @@ export default function ChatWindow({
       setLoading(false);
       setTimeout(scrollToBottom, 100);
 
-      // Đánh dấu đã đọc
+      // Đánh dấu đã đọc (silent)
       try {
         await supabase.rpc("mark_messages_read", {
           p_channel_id: channelId,
           p_user_id: currentUserId,
         });
       } catch {
-        // Fallback: nếu RPC chưa tạo thì bỏ qua
+        // RPC chưa tạo → bỏ qua
       }
     }
 
@@ -101,10 +108,18 @@ export default function ChatWindow({
     return () => {
       ignore = true;
     };
-  }, [channelId, currentUserId, scrollToBottom, supabase]);
+  }, [channelId, currentUserId, scrollToBottom]);
 
   // ── Realtime subscription ──────────────────────────────
   useEffect(() => {
+    const supabase = supabaseRef.current;
+
+    // Hủy subscription cũ nếu có
+    if (realtimeRef.current) {
+      supabase.removeChannel(realtimeRef.current);
+      realtimeRef.current = null;
+    }
+
     const channel = supabase
       .channel(`messages:${channelId}`)
       .on(
@@ -136,20 +151,25 @@ export default function ChatWindow({
             sender_name: profile?.full_name ?? "Ẩn danh",
           };
 
-          setMessages((prev) => [...prev, newMsg]);
+          // Tránh duplicate (optimistic update đã thêm)
+          setMessages((prev) => {
+            if (prev.some((msg) => msg.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
           setTimeout(scrollToBottom, 50);
         },
       )
       .subscribe();
 
-    channelRef.current = channel;
+    realtimeRef.current = channel;
 
     return () => {
       supabase.removeChannel(channel);
+      realtimeRef.current = null;
     };
-  }, [channelId, scrollToBottom, supabase]);
+  }, [channelId, scrollToBottom]);
 
-  // ── Gửi tin nhắn ──────────────────────────────────────
+  // ── Gửi tin nhắn (optimistic update) ──────────────────
   async function handleSend(isUrgent = false) {
     const body = input.trim();
     if (!body || sending) return;
@@ -157,12 +177,43 @@ export default function ChatWindow({
     setSending(true);
     setInput("");
 
-    await supabase.from("messages").insert({
+    // Optimistic update
+    const optimisticId = crypto.randomUUID();
+    const optimisticMsg: Message = {
+      id: optimisticId,
       channel_id: channelId,
       sender_id: currentUserId,
       body,
       is_urgent: isUrgent,
-    });
+      read_by: [],
+      created_at: new Date().toISOString(),
+      sender_name: currentUserName,
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setTimeout(scrollToBottom, 50);
+
+    const { data, error } = await supabaseRef.current
+      .from("messages")
+      .insert({
+        channel_id: channelId,
+        sender_id: currentUserId,
+        body,
+        is_urgent: isUrgent,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("Lỗi gửi tin nhắn:", error);
+      // Xóa tin optimistic nếu lỗi
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+    } else if (data) {
+      // Thay thế optimistic ID bằng ID thực từ server
+      setMessages((prev) =>
+        prev.map((m) => (m.id === optimisticId ? { ...m, id: data.id } : m)),
+      );
+    }
 
     setSending(false);
   }
@@ -340,7 +391,9 @@ export default function ChatWindow({
                           🚨 Khẩn
                         </p>
                       )}
-                      {msg.body}
+                      <p className="whitespace-pre-wrap break-words">
+                        {msg.body}
+                      </p>
                     </div>
                   </div>
                 </div>
