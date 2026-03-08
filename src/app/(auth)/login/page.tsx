@@ -2,6 +2,7 @@
 
 import { createBrowserClient } from "@supabase/ssr";
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -193,6 +194,21 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+
+        {/* ── Divider ──────────────────────────────────────── */}
+        <div className="flex items-center gap-4">
+          <div className="h-px flex-1 bg-foreground/10" />
+          <span className="text-xs text-foreground/40">chưa có tài khoản?</span>
+          <div className="h-px flex-1 bg-foreground/10" />
+        </div>
+
+        {/* ── Link đăng ký ─────────────────────────────────── */}
+        <Link
+          href="/register"
+          className="block w-full rounded-lg border border-foreground/10 bg-foreground/3 px-4 py-2.5 text-center text-sm font-medium text-foreground transition hover:bg-foreground/7"
+        >
+          Tạo tài khoản nhân viên mới
+        </Link>
       </div>
     </div>
   );

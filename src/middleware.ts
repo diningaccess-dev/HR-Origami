@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 // Các route không cần guard (cho user chưa login hoặc chưa active)
-const PUBLIC_ROUTES = ["/login", "/pending"];
+const PUBLIC_ROUTES = ["/login", "/register", "/pending"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
