@@ -55,7 +55,8 @@ export async function middleware(request: NextRequest) {
 
   // ── 1. Chưa login ──────────────────────────────────────────
   if (!user) {
-    if (pathname === "/login") return supabaseResponse;
+    if (pathname === "/login" || pathname === "/register")
+      return supabaseResponse;
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
