@@ -78,7 +78,7 @@ export default function ChecklistPage() {
     // 1) fetch templates for user's location
     const { data: tpls } = await supabase
       .from("checklist_templates")
-      .select("id, name, type, items")
+      .select("id, name, type, items, assigned_to")
       .order("type", { ascending: true });
 
     if (!tpls || tpls.length === 0) {
@@ -87,10 +87,25 @@ export default function ChecklistPage() {
       return;
     }
 
-    setTemplates(tpls as Template[]);
+    // Lọc: chỉ hiện template được gán cho user (hoặc chưa gán ai = tất cả thấy)
+    const filtered = tpls.filter((t) => {
+      const assigned = (t as Record<string, unknown>).assigned_to as
+        | string[]
+        | null;
+      if (!assigned || assigned.length === 0) return true;
+      return assigned.includes(userId);
+    });
+
+    if (filtered.length === 0 && userId) {
+      setTemplates([]);
+      setLoading(false);
+      return;
+    }
+
+    setTemplates(filtered as Template[]);
 
     // 2) fetch today's runs for these templates
-    const templateIds = tpls.map((t) => t.id);
+    const templateIds = filtered.map((t) => t.id);
     const { data: existingRuns } = await supabase
       .from("checklist_runs")
       .select("id, template_id, date, completed_items, progress")
@@ -103,7 +118,7 @@ export default function ChecklistPage() {
       existingMap[r.template_id] = r as Run;
     }
 
-    const missingTemplates = tpls.filter((t) => !existingMap[t.id]);
+    const missingTemplates = filtered.filter((t) => !existingMap[t.id]);
     if (missingTemplates.length > 0) {
       const newRuns = missingTemplates.map((t) => ({
         template_id: t.id,
@@ -125,12 +140,12 @@ export default function ChecklistPage() {
     setRuns(existingMap);
 
     // default tab
-    if (!activeTab && tpls.length > 0) {
-      setActiveTab(tpls[0].id);
+    if (!activeTab && filtered.length > 0) {
+      setActiveTab(filtered[0].id);
     }
 
     setLoading(false);
-  }, [activeTab]);
+  }, [activeTab, userId]);
 
   /* ── init ────────────────────────────────────── */
   useEffect(() => {
