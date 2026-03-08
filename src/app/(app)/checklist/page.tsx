@@ -1,7 +1,7 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { format } from "date-fns";
 
 const supabase = createBrowserClient(
@@ -56,102 +56,106 @@ export default function ChecklistPage() {
     setTimeout(() => setToast(null), 3000);
   }
 
-  /* ── fetch user ──────────────────────────────── */
-  const fetchUser = useCallback(async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    setUserId(user.id);
+  /* ── init: fetch user + templates + runs ───── */
+  useEffect(() => {
+    let ignore = false;
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .single();
+    async function init() {
+      // 1) Fetch user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || ignore) return;
 
-    setUserName(profile?.full_name ?? "");
-  }, []);
+      const uid = user.id;
+      setUserId(uid);
 
-  /* ── fetch templates + runs ──────────────────── */
-  const fetchData = useCallback(async () => {
-    // 1) fetch templates for user's location
-    const { data: tpls } = await supabase
-      .from("checklist_templates")
-      .select("id, name, type, items, assigned_to")
-      .order("type", { ascending: true });
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", uid)
+        .single();
 
-    if (!tpls || tpls.length === 0) {
-      setTemplates([]);
-      setLoading(false);
-      return;
-    }
+      const uName = profile?.full_name ?? "";
+      setUserName(uName);
 
-    // Lọc: chỉ hiện template được gán cho user (hoặc chưa gán ai = tất cả thấy)
-    const filtered = tpls.filter((t) => {
-      const assigned = (t as Record<string, unknown>).assigned_to as
-        | string[]
-        | null;
-      if (!assigned || assigned.length === 0) return true;
-      return assigned.includes(userId);
-    });
+      // 2) Fetch templates
+      const { data: tpls } = await supabase
+        .from("checklist_templates")
+        .select("id, name, type, items, assigned_to")
+        .order("type", { ascending: true });
 
-    if (filtered.length === 0 && userId) {
-      setTemplates([]);
-      setLoading(false);
-      return;
-    }
+      if (ignore) return;
 
-    setTemplates(filtered as Template[]);
+      if (!tpls || tpls.length === 0) {
+        setTemplates([]);
+        setLoading(false);
+        return;
+      }
 
-    // 2) fetch today's runs for these templates
-    const templateIds = filtered.map((t) => t.id);
-    const { data: existingRuns } = await supabase
-      .from("checklist_runs")
-      .select("id, template_id, date, completed_items, progress")
-      .in("template_id", templateIds)
-      .eq("date", today.current);
+      // Lọc: chỉ hiện template được gán cho user (hoặc chưa gán ai = tất cả thấy)
+      const filtered = tpls.filter((t) => {
+        const assigned = (t as Record<string, unknown>).assigned_to as
+          | string[]
+          | null;
+        if (!assigned || assigned.length === 0) return true;
+        return assigned.includes(uid);
+      });
 
-    // 3) create missing runs for today
-    const existingMap: Record<string, Run> = {};
-    for (const r of existingRuns ?? []) {
-      existingMap[r.template_id] = r as Run;
-    }
+      if (filtered.length === 0) {
+        setTemplates([]);
+        setLoading(false);
+        return;
+      }
 
-    const missingTemplates = filtered.filter((t) => !existingMap[t.id]);
-    if (missingTemplates.length > 0) {
-      const newRuns = missingTemplates.map((t) => ({
-        template_id: t.id,
-        date: today.current,
-        completed_items: [],
-        progress: 0,
-      }));
+      setTemplates(filtered as Template[]);
 
-      const { data: inserted } = await supabase
+      // 3) Fetch today's runs
+      const templateIds = filtered.map((t) => t.id);
+      const { data: existingRuns } = await supabase
         .from("checklist_runs")
-        .insert(newRuns)
-        .select("id, template_id, date, completed_items, progress");
+        .select("id, template_id, date, completed_items, progress")
+        .in("template_id", templateIds)
+        .eq("date", today.current);
 
-      for (const r of inserted ?? []) {
+      if (ignore) return;
+
+      const existingMap: Record<string, Run> = {};
+      for (const r of existingRuns ?? []) {
         existingMap[r.template_id] = r as Run;
       }
+
+      // 4) Create missing runs for today
+      const missingTemplates = filtered.filter((t) => !existingMap[t.id]);
+      if (missingTemplates.length > 0) {
+        const newRuns = missingTemplates.map((t) => ({
+          template_id: t.id,
+          date: today.current,
+          completed_items: [],
+          progress: 0,
+        }));
+
+        const { data: inserted } = await supabase
+          .from("checklist_runs")
+          .insert(newRuns)
+          .select("id, template_id, date, completed_items, progress");
+
+        for (const r of inserted ?? []) {
+          existingMap[r.template_id] = r as Run;
+        }
+      }
+
+      setRuns(existingMap);
+      if (filtered.length > 0) {
+        setActiveTab(filtered[0].id);
+      }
+      setLoading(false);
     }
 
-    setRuns(existingMap);
-
-    // default tab
-    if (!activeTab && filtered.length > 0) {
-      setActiveTab(filtered[0].id);
-    }
-
-    setLoading(false);
-  }, [activeTab, userId]);
-
-  /* ── init ────────────────────────────────────── */
-  useEffect(() => {
-    fetchUser();
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    init();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   /* ── realtime subscription ───────────────────── */
