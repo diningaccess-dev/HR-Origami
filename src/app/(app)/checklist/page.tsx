@@ -194,6 +194,8 @@ export default function ChecklistPage() {
 
     setToggling(itemIndex);
 
+    if ("vibrate" in navigator) navigator.vibrate(8);
+
     const template = templates.find((t) => t.id === templateId);
     if (!template) return;
 
@@ -317,7 +319,7 @@ export default function ChecklistPage() {
             <button
               key={tpl.id}
               onClick={() => setActiveTab(tpl.id)}
-              className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 active:scale-[0.97] ${
                 isActive
                   ? "text-white"
                   : "bg-foreground/5 text-muted-foreground"
@@ -370,15 +372,15 @@ export default function ChecklistPage() {
               key={idx}
               onClick={() => toggleItem(currentTemplate.id, idx)}
               disabled={toggling !== null}
-              className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-colors ${
+              className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200 active:scale-[0.98] ${
                 isDone
                   ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30"
-                  : "border-border bg-background active:bg-foreground/5"
+                  : "border-border bg-background"
               }`}
             >
               {/* checkbox */}
               <div
-                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
+                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-200 ${
                   isDone
                     ? "border-emerald-500 bg-emerald-500"
                     : "border-muted-foreground/30"

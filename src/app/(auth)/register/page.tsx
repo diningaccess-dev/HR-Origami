@@ -90,7 +90,7 @@ export default function RegisterPage() {
   if (done) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm space-y-6 text-center">
+        <div className="w-full max-w-sm space-y-6 text-center animate-in fade-in zoom-in-95 duration-300">
           <div className="flex justify-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50">
               <svg
@@ -125,7 +125,7 @@ export default function RegisterPage() {
 
           <Link
             href="/login"
-            className="inline-block w-full rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background transition hover:bg-foreground/90"
+            className="inline-block w-full rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-all duration-100 hover:bg-foreground/90 active:scale-[0.97]"
           >
             Về trang đăng nhập
           </Link>
@@ -137,7 +137,7 @@ export default function RegisterPage() {
   // ── Form đăng ký ────────────────────────────────────────────
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm space-y-6">
+      <div className="w-full max-w-sm space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
         {/* ── Logo / App name ──────────────────────────────── */}
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
@@ -151,7 +151,7 @@ export default function RegisterPage() {
         {/* ── Toast ────────────────────────────────────────── */}
         {toast && (
           <div
-            className={`rounded-lg border px-4 py-3 text-sm ${
+            className={`rounded-lg border px-4 py-3 text-sm animate-in fade-in slide-in-from-top-2 duration-200 ${
               toastType === "success"
                 ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                 : "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300"
@@ -269,7 +269,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading || !fullName.trim() || !email || !password}
-            className="relative w-full rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background transition hover:bg-foreground/90 disabled:opacity-50"
+            className="relative w-full rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-all duration-100 hover:bg-foreground/90 active:scale-[0.97] disabled:opacity-50"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -310,7 +310,7 @@ export default function RegisterPage() {
         {/* ── Link to login ────────────────────────────────── */}
         <Link
           href="/login"
-          className="block w-full rounded-lg border border-foreground/10 bg-foreground/3 px-4 py-2.5 text-center text-sm font-medium text-foreground transition hover:bg-foreground/7"
+          className="block w-full rounded-lg border border-foreground/10 bg-foreground/3 px-4 py-2.5 text-center text-sm font-medium text-foreground transition-all duration-100 hover:bg-foreground/7 active:scale-[0.97]"
         >
           Đã có tài khoản? Đăng nhập
         </Link>

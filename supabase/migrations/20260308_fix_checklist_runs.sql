@@ -1,69 +1,55 @@
 -- ============================================================
--- Fix: Tạo lại bảng checklist_runs nếu thiếu hoặc sai schema
+-- FIX: Infinite recursion in RLS policies for checklist_runs
+-- Chạy trên Supabase Dashboard → SQL Editor
 -- ============================================================
 
--- Tạo bảng checklist_runs nếu chưa có
-CREATE TABLE IF NOT EXISTS checklist_runs (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  template_id uuid NOT NULL REFERENCES checklist_templates(id) ON DELETE CASCADE,
-  date date NOT NULL DEFAULT CURRENT_DATE,
-  completed_items jsonb NOT NULL DEFAULT '[]',
-  progress integer NOT NULL DEFAULT 0,
-  created_at timestamptz DEFAULT now()
-);
-
--- Đảm bảo có constraint unique (template_id, date)
--- để mỗi template chỉ có 1 run mỗi ngày
+-- BƯỚC 1: XÓA TẤT CẢ policies cũ trên checklist_runs
 DO $$
+DECLARE
+  pol RECORD;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'checklist_runs_template_date_unique'
-  ) THEN
-    ALTER TABLE checklist_runs
-    ADD CONSTRAINT checklist_runs_template_date_unique
-    UNIQUE (template_id, date);
-  END IF;
+  FOR pol IN
+    SELECT policyname FROM pg_policies WHERE tablename = 'checklist_runs'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON checklist_runs', pol.policyname);
+  END LOOP;
 END $$;
 
--- Thêm cột nếu thiếu (cho trường hợp bảng đã tồn tại)
-ALTER TABLE checklist_runs ADD COLUMN IF NOT EXISTS date date NOT NULL DEFAULT CURRENT_DATE;
-ALTER TABLE checklist_runs ADD COLUMN IF NOT EXISTS completed_items jsonb NOT NULL DEFAULT '[]';
-ALTER TABLE checklist_runs ADD COLUMN IF NOT EXISTS progress integer NOT NULL DEFAULT 0;
+-- BƯỚC 2: XÓA TẤT CẢ policies cũ trên checklist_templates
+DO $$
+DECLARE
+  pol RECORD;
+BEGIN
+  FOR pol IN
+    SELECT policyname FROM pg_policies WHERE tablename = 'checklist_templates'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON checklist_templates', pol.policyname);
+  END LOOP;
+END $$;
 
--- RLS policies: cho phép mọi authenticated user đọc/ghi
+-- BƯỚC 3: Tạo policies MỚI cho checklist_runs
 ALTER TABLE checklist_runs ENABLE ROW LEVEL SECURITY;
 
--- Drop cũ nếu có (tránh lỗi duplicate)
-DROP POLICY IF EXISTS "checklist_runs_select" ON checklist_runs;
-DROP POLICY IF EXISTS "checklist_runs_insert" ON checklist_runs;
-DROP POLICY IF EXISTS "checklist_runs_update" ON checklist_runs;
+CREATE POLICY "runs_select" ON checklist_runs
+  FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY "checklist_runs_select" ON checklist_runs
-  FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "runs_insert" ON checklist_runs
+  FOR INSERT TO authenticated WITH CHECK (true);
 
-CREATE POLICY "checklist_runs_insert" ON checklist_runs
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "runs_update" ON checklist_runs
+  FOR UPDATE TO authenticated USING (true);
 
-CREATE POLICY "checklist_runs_update" ON checklist_runs
-  FOR UPDATE USING (auth.role() = 'authenticated');
-
--- RLS cho checklist_templates nếu chưa có
+-- BƯỚC 4: Tạo policies MỚI cho checklist_templates
 ALTER TABLE checklist_templates ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "checklist_templates_select" ON checklist_templates;
-DROP POLICY IF EXISTS "checklist_templates_insert" ON checklist_templates;
-DROP POLICY IF EXISTS "checklist_templates_update" ON checklist_templates;
-DROP POLICY IF EXISTS "checklist_templates_delete" ON checklist_templates;
+CREATE POLICY "templates_select" ON checklist_templates
+  FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY "checklist_templates_select" ON checklist_templates
-  FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "templates_insert" ON checklist_templates
+  FOR INSERT TO authenticated WITH CHECK (true);
 
-CREATE POLICY "checklist_templates_insert" ON checklist_templates
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "templates_update" ON checklist_templates
+  FOR UPDATE TO authenticated USING (true);
 
-CREATE POLICY "checklist_templates_update" ON checklist_templates
-  FOR UPDATE USING (auth.role() = 'authenticated');
-
-CREATE POLICY "checklist_templates_delete" ON checklist_templates
-  FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "templates_delete" ON checklist_templates
+  FOR DELETE TO authenticated USING (true);

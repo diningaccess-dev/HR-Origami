@@ -107,6 +107,7 @@ export default function ApprovalPage() {
       locationId: "enso",
     };
 
+    if ("vibrate" in navigator) navigator.vibrate(8);
     setActionLoading(profileId);
     const { error } = await supabase
       .from("profiles")
@@ -127,6 +128,7 @@ export default function ApprovalPage() {
 
   // ── Từ chối tài khoản ──────────────────────────────────────
   async function handleReject(profileId: string) {
+    if ("vibrate" in navigator) navigator.vibrate(8);
     setActionLoading(profileId);
     const { error } = await supabase
       .from("profiles")
@@ -229,7 +231,7 @@ export default function ApprovalPage() {
           return (
             <div
               key={profile.id}
-              className="rounded-xl border border-foreground/10 bg-background p-4 space-y-4"
+              className="rounded-xl border border-foreground/10 bg-background p-4 space-y-4 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
             >
               {/* ── Thông tin user ───────────────────────────── */}
               <div>
@@ -290,7 +292,7 @@ export default function ApprovalPage() {
                   type="button"
                   onClick={() => handleApprove(profile.id)}
                   disabled={isProcessing}
-                  className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                  className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-all duration-100 hover:bg-emerald-700 active:scale-[0.97] disabled:opacity-50"
                 >
                   {isProcessing ? "Đang xử lý..." : "Duyệt"}
                 </button>
@@ -298,7 +300,7 @@ export default function ApprovalPage() {
                   type="button"
                   onClick={() => handleReject(profile.id)}
                   disabled={isProcessing}
-                  className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
+                  className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-all duration-100 hover:bg-red-700 active:scale-[0.97] disabled:opacity-50"
                 >
                   Từ chối
                 </button>
