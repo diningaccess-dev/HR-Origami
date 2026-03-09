@@ -224,6 +224,13 @@ export default async function HrPage() {
           href: "/admin/employees",
         },
         {
+          emoji: "📋",
+          iconBg: "#e0f2fe",
+          title: "Quản lý Checklist",
+          subtitle: "Thêm, sửa, gán checklist",
+          href: "/checklist/manage",
+        },
+        {
           emoji: "👥",
           iconBg: "#fee2e2",
           title: "Duyệt tài khoản",
