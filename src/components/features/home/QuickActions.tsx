@@ -185,8 +185,11 @@ export default function QuickActions({ role, locationId }: QuickActionsProps) {
           return (
             <button
               key={action.key}
-              onClick={() => router.push(action.href)}
-              className="flex flex-col items-center gap-[5px]"
+              onClick={() => {
+                if ("vibrate" in navigator) navigator.vibrate(5);
+                router.push(action.href);
+              }}
+              className="flex flex-col items-center gap-[5px] transition-transform duration-100 active:scale-[0.93]"
             >
               <div
                 className="relative flex items-center justify-center rounded-2xl"
@@ -241,8 +244,11 @@ export default function QuickActions({ role, locationId }: QuickActionsProps) {
             return (
               <button
                 key={action.key}
-                onClick={() => router.push(action.href)}
-                className="flex flex-col items-center gap-[5px] transition-transform duration-100 active:scale-[0.95]"
+                onClick={() => {
+                  if ("vibrate" in navigator) navigator.vibrate(5);
+                  router.push(action.href);
+                }}
+                className="flex flex-col items-center gap-[5px] transition-transform duration-100 active:scale-[0.93]"
               >
                 <div
                   className="relative flex items-center justify-center rounded-2xl"

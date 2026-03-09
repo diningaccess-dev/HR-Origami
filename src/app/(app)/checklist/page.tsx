@@ -299,7 +299,7 @@ export default function ChecklistPage() {
 
   /* ── render ──────────────────────────────────── */
   return (
-    <div className="mx-auto max-w-md px-4 py-6 space-y-5">
+    <div className="mx-auto max-w-md px-4 py-6 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* ── header ────────────────────────────── */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Checklist</h1>
@@ -318,7 +318,10 @@ export default function ChecklistPage() {
           return (
             <button
               key={tpl.id}
-              onClick={() => setActiveTab(tpl.id)}
+              onClick={() => {
+                if ("vibrate" in navigator) navigator.vibrate(5);
+                setActiveTab(tpl.id);
+              }}
               className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 active:scale-[0.97] ${
                 isActive
                   ? "text-white"
@@ -362,7 +365,10 @@ export default function ChecklistPage() {
       </div>
 
       {/* ── checklist items ───────────────────── */}
-      <div className="space-y-2">
+      <div
+        key={currentTemplate.id}
+        className="space-y-2 animate-in fade-in duration-200"
+      >
         {currentTemplate.items.map((item, idx) => {
           const completed = completedMap.get(idx);
           const isDone = !!completed;
@@ -436,7 +442,7 @@ export default function ChecklistPage() {
 
       {/* ── 100% complete banner ──────────────── */}
       {progress === 100 && (
-        <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 dark:bg-emerald-950/30">
+        <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 dark:bg-emerald-950/30 animate-in fade-in zoom-in-95 duration-300">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500">
             <svg
               className="h-5 w-5 text-white"
@@ -466,7 +472,7 @@ export default function ChecklistPage() {
       {/* ── toast ─────────────────────────────── */}
       {toast && (
         <div
-          className={`fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-xl px-4 py-2 text-sm font-medium text-white shadow-lg ${
+          className={`fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-xl px-4 py-2 text-sm font-medium text-white shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-200 ${
             toast.type === "ok" ? "bg-emerald-600" : "bg-red-600"
           }`}
         >

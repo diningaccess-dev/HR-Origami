@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -27,7 +28,6 @@ type BottomNavProps = {
 
 export default function BottomNav({ role, locationId }: BottomNavProps) {
   const pathname = usePathname();
-  const router = useRouter();
 
   // ── Badge: đếm pending profiles (chỉ manager/owner) ────
   const [pendingCount, setPendingCount] = useState(0);
@@ -155,31 +155,37 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
       {tabs.map((tab) => {
         const active = isActive(tab.href);
         const Icon = tab.icon;
-        // Icon nhỏ hơn khi 5 tab
         const iconSize = cols === 5 ? 20 : 22;
 
         return (
-          <button
+          <Link
             key={tab.key}
+            href={tab.href}
+            prefetch={true}
             onClick={() => {
+              if ("vibrate" in navigator) navigator.vibrate(5);
               window.scrollTo({ top: 0, behavior: "instant" });
-              router.push(tab.href);
             }}
-            className="flex flex-col items-center justify-center gap-[3px] py-2 transition-transform duration-100 active:scale-[0.93]"
+            className="flex flex-col items-center justify-center gap-[3px] py-2 transition-transform duration-100 active:scale-[0.9]"
           >
             {/* Icon + badge */}
             <div className="relative flex items-center justify-center w-7 h-7">
               <Icon
                 size={iconSize}
-                strokeWidth={1.5}
-                style={{ stroke: active ? brandColor : "#9ca3af" }}
+                strokeWidth={active ? 2 : 1.5}
+                className="transition-all duration-200"
+                style={{
+                  stroke: active ? brandColor : "#9ca3af",
+                  transform: active ? "scale(1.1)" : "scale(1)",
+                }}
               />
               {/* Badge */}
               {tab.badge != null && tab.badge > 0 && (
                 <span
                   className="absolute -top-1 -right-1.5 flex items-center justify-center
                              w-[14px] h-[14px] rounded-full bg-red-500 text-white
-                             text-[8px] font-bold border-[1.5px] border-white"
+                             text-[8px] font-bold border-[1.5px] border-white
+                             animate-in zoom-in duration-200"
                 >
                   {tab.badge > 9 ? "9+" : tab.badge}
                 </span>
@@ -188,18 +194,19 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
 
             {/* Label — chỉ active mới hiện */}
             <span
-              className="text-[10px] font-semibold leading-none tracking-wide"
+              className="text-[10px] font-semibold leading-none tracking-wide transition-all duration-200"
               style={{
                 fontFamily: "Sora, sans-serif",
                 color: active ? brandColor : "transparent",
                 height: active ? "auto" : "0",
                 overflow: "hidden",
-                transition: "color 0.15s",
+                opacity: active ? 1 : 0,
+                transform: active ? "translateY(0)" : "translateY(2px)",
               }}
             >
               {tab.label}
             </span>
-          </button>
+          </Link>
         );
       })}
     </nav>
