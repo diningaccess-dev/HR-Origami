@@ -207,8 +207,15 @@ export default async function HrPage() {
   // Manager/Owner: nhóm Quản lý
   if (isManager) {
     groups.push({
-      label: "Quản lý",
+      label: "Quản trị",
       items: [
+        {
+          emoji: "👤",
+          iconBg: "#dbeafe",
+          title: "Quản lý nhân viên",
+          subtitle: "Tạo & sửa tài khoản",
+          href: "/admin/employees",
+        },
         {
           emoji: "👥",
           iconBg: "#fee2e2",
