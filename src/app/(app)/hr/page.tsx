@@ -177,6 +177,13 @@ export default async function HrPage() {
         href: "/hr/sick-report",
       },
       {
+        emoji: "🏖️",
+        iconBg: "#dbeafe",
+        title: "Nghỉ phép",
+        subtitle: "Urlaub & Sonderurlaub",
+        href: "/schedule/leave",
+      },
+      {
         emoji: "📄",
         iconBg: "#e0f2fe",
         title: "Giấy tờ",
