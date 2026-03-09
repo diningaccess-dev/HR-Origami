@@ -72,17 +72,20 @@ export default function ChecklistPage() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name")
+        .select("full_name, location_id")
         .eq("id", uid)
         .single();
 
       const uName = profile?.full_name ?? "";
       setUserName(uName);
 
-      // 2) Fetch templates
+      const locationId = profile?.location_id ?? "enso";
+
+      // 2) Fetch templates — chỉ lấy template cùng quán
       const { data: tpls } = await supabase
         .from("checklist_templates")
         .select("id, name, type, items, assigned_to")
+        .eq("location_id", locationId)
         .order("type", { ascending: true });
 
       if (ignore) return;
