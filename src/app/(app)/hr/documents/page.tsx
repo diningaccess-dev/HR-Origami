@@ -60,6 +60,8 @@ export default function DocumentsPage() {
   const [uploadExpiresAt, setUploadExpiresAt] = useState("");
   const [uploadNotes, setUploadNotes] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadForProfileId, setUploadForProfileId] = useState(""); // manager chọn nhân viên
+  const [locationProfiles, setLocationProfiles] = useState<Profile[]>([]); // danh sách nhân viên
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = useRef(createClient());
@@ -103,13 +105,14 @@ export default function DocumentsPage() {
     if (isManagerRole) {
       // Manager: lấy tất cả documents trong location
       // Trước tiên lấy danh sách profile_id trong cùng location
-      const { data: locationProfiles } = await sb
+      const { data: locProfiles } = await sb
         .from("profiles")
-        .select("id, full_name")
-        .eq("location_id", prof.location_id);
+        .select("id, full_name, role, location_id")
+        .eq("location_id", prof.location_id)
+        .eq("status", "active");
 
       const profileMap = new Map(
-        (locationProfiles ?? []).map((p: { id: string; full_name: string }) => [
+        (locProfiles ?? []).map((p: { id: string; full_name: string }) => [
           p.id,
           p.full_name,
         ]),
@@ -130,6 +133,9 @@ export default function DocumentsPage() {
           })),
         );
       }
+
+      // Lưu danh sách profiles cho dropdown
+      setLocationProfiles((locProfiles ?? []) as Profile[]);
     } else {
       // Staff: chỉ xem document của mình
       const { data: docs } = await sb
@@ -198,13 +204,17 @@ export default function DocumentsPage() {
       } = sb.storage.from("documents").getPublicUrl(filePath);
 
       // Ghi vào bảng documents
+      const targetProfileId =
+        isManager && uploadForProfileId ? uploadForProfileId : user.id;
+
       const { error: insertError } = await sb.from("documents").insert({
-        profile_id: user.id,
+        profile_id: targetProfileId,
         type: uploadType,
         file_url: publicUrl,
         issued_at: uploadIssuedAt || null,
         expires_at: uploadExpiresAt || null,
         notes: uploadNotes || null,
+        uploaded_by: user.id,
       });
 
       if (insertError) throw insertError;
@@ -216,6 +226,7 @@ export default function DocumentsPage() {
       setUploadIssuedAt("");
       setUploadExpiresAt("");
       setUploadNotes("");
+      setUploadForProfileId("");
       if (fileInputRef.current) fileInputRef.current.value = "";
 
       setToast("Đã tải lên thành công ✓");
@@ -263,7 +274,7 @@ export default function DocumentsPage() {
 
   // ── Render ─────────────────────────────────────────────────
   return (
-    <div className="mx-auto max-w-md px-4 py-6">
+    <div className="mx-auto max-w-md px-4 py-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* ── Header ────────────────────────────────────────── */}
       <div className="mb-5 flex items-center justify-between">
         <div>
@@ -274,7 +285,7 @@ export default function DocumentsPage() {
         </div>
         <button
           onClick={() => setShowUploadForm(!showUploadForm)}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-transform active:scale-95"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-all duration-100 active:scale-[0.9]"
           style={{ backgroundColor: brandColor }}
           aria-label="Thêm giấy tờ"
         >
@@ -310,6 +321,27 @@ export default function DocumentsPage() {
           <p className="text-sm font-semibold text-foreground">
             Tải lên giấy tờ mới
           </p>
+
+          {/* Chọn nhân viên (chỉ manager) */}
+          {isManager && locationProfiles.length > 0 && (
+            <div>
+              <label className="mb-1 block text-xs text-foreground/50">
+                Cho nhân viên
+              </label>
+              <select
+                value={uploadForProfileId}
+                onChange={(e) => setUploadForProfileId(e.target.value)}
+                className="w-full rounded-lg border border-foreground/10 bg-foreground/[0.03] px-3 py-2 text-sm text-foreground focus:outline-none"
+              >
+                <option value="">Cho chính mình</option>
+                {locationProfiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.full_name} ({p.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Loại giấy tờ */}
           <div>
@@ -462,7 +494,7 @@ export default function DocumentsPage() {
                 href={doc.file_url ?? "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-2xl border border-foreground/10 bg-background px-4 py-3.5 transition-colors active:bg-foreground/[0.03]"
+                className="flex items-center gap-3 rounded-2xl border border-foreground/10 bg-background px-4 py-3.5 transition-all duration-200 active:scale-[0.98] active:bg-foreground/[0.03]"
               >
                 {/* Icon */}
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-foreground/[0.06] text-lg">
