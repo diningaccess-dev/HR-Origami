@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -9,7 +9,6 @@ import {
   Calendar,
   MessageCircle,
   BookOpen,
-  UserCheck,
   User,
 } from "lucide-react";
 
@@ -30,7 +29,6 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
   const pathname = usePathname();
 
   // ── Badge: đếm pending profiles (chỉ manager/owner) ────
-  const [pendingCount, setPendingCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const isManager = role === "manager" || role === "owner";
@@ -39,15 +37,6 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
     try {
       const supabase = createClient();
 
-      // Pending profiles (manager/owner)
-      if (isManager) {
-        const { count } = await supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "pending")
-          .eq("location_id", locationId);
-        setPendingCount(count ?? 0);
-      }
 
       // Unread messages — đếm tin mới trong 24h không phải của mình
       const {
@@ -105,13 +94,6 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
       href: "/studyhub",
       icon: BookOpen,
     };
-    const approval: TabItem = {
-      key: "approval",
-      label: "Duyệt",
-      href: "/admin/approval",
-      icon: UserCheck,
-      badge: pendingCount,
-    };
     const hr: TabItem = {
       key: "hr",
       label: "Hồ sơ",
@@ -124,7 +106,7 @@ export default function BottomNav({ role, locationId }: BottomNavProps) {
         return [home, schedule, chat, studyhub, hr]; // 5 tab
       case "manager":
       case "owner":
-        return [home, schedule, chat, approval, hr]; // 5 tab
+        return [home, schedule, chat, studyhub, hr]; // 5 tab
       default: // staff
         return [home, schedule, chat, hr]; // 4 tab
     }
