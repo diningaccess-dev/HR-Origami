@@ -3,34 +3,30 @@ import { format } from "date-fns";
 // Màu accent bar + badge theo role_tag
 const ROLE_COLORS: Record<
   string,
-  { accent: string; bg: string; text: string; emoji: string; label: string }
+  { accent: string; bg: string; text: string; label: string }
 > = {
   kitchen: {
     accent: "var(--brand-color)",
     bg: "var(--brand-surface, #D8F3DC)",
     text: "var(--brand-color)",
-    emoji: "🍳",
     label: "Bếp",
   },
   service: {
     accent: "#0ea5e9",
     bg: "#e0f2fe",
     text: "#0369a1",
-    emoji: "🍜",
     label: "Service",
   },
   bar: {
     accent: "#fbbf24",
     bg: "#fef9c3",
     text: "#a16207",
-    emoji: "🍶",
     label: "Bar",
   },
   all: {
     accent: "#a855f7",
     bg: "#f3e8ff",
     text: "#7c3aed",
-    emoji: "⭐",
     label: "Tất cả",
   },
 };
@@ -162,7 +158,7 @@ export default function ShiftCard({ shift }: ShiftCardProps) {
             color: isOpen ? "#dc2626" : roleStyle.text,
           }}
         >
-          {roleStyle.emoji} {roleStyle.label}
+          {roleStyle.label}
         </span>
 
         {/* Tên nhân viên */}

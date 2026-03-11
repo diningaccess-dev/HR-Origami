@@ -24,16 +24,16 @@ type EmpHours = {
 type LocationSummary = {
   id: string;
   label: string;
-  emoji: string;
+  initial: string;
   totalHours: number;
   totalShifts: number;
   totalEmp: number;
 };
 
 const LOCATIONS = [
-  { id: "origami", label: "Origami", emoji: "🍣", color: "#f59e0b" },
-  { id: "enso", label: "Enso", emoji: "🍜", color: "#22c55e" },
-  { id: "okyu", label: "Okyu", emoji: "🍶", color: "#ef4444" },
+  { id: "origami", label: "Origami", initial: "O", color: "#f59e0b" },
+  { id: "enso", label: "Enso", initial: "E", color: "#22c55e" },
+  { id: "okyu", label: "Okyu", initial: "K", color: "#ef4444" },
 ];
 
 /* ══════════════════════════════════════════════════════
@@ -172,7 +172,7 @@ export default function AnalyticsPage() {
         return {
           id: loc.id,
           label: loc.label,
-          emoji: loc.emoji,
+          initial: loc.initial,
           totalHours: Math.round(totalH * 10) / 10,
           totalShifts: locShifts.length,
           totalEmp: uniqueEmps.size,
@@ -217,7 +217,7 @@ export default function AnalyticsPage() {
               color: "#1a1a1a",
             }}
           >
-            📊 Analytics
+            Analytics
           </h1>
           <p className="text-[10px] text-foreground/40">
             {isOwner ? "Tất cả quán" : LOCATIONS.find((l) => l.id === locationId)?.label}
@@ -296,7 +296,12 @@ export default function AnalyticsPage() {
 
                     return (
                       <div key={loc.id} className="text-center">
-                        <span className="text-2xl">{loc.emoji}</span>
+                        <div
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold text-white mx-auto"
+                          style={{ backgroundColor: locInfo.color }}
+                        >
+                          {loc.initial}
+                        </div>
                         <p className="text-xs font-bold text-foreground mt-1">{loc.label}</p>
                         {/* Mini bar */}
                         <div className="mt-2 mx-auto w-full rounded-full bg-foreground/5 h-2 overflow-hidden">

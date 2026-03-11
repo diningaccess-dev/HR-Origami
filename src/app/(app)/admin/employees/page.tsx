@@ -8,10 +8,10 @@ import CreateEmployeeModal from "@/components/features/admin/CreateEmployeeModal
 import EditEmployeeModal from "@/components/features/admin/EditEmployeeModal";
 
 const LOCATION_TABS = [
-  { value: "all", label: "Tất cả", emoji: "👥" },
-  { value: "origami", label: "Origami", emoji: "🦢" },
-  { value: "enso", label: "Enso", emoji: "🍃" },
-  { value: "okyu", label: "Okyu", emoji: "🔴" },
+  { value: "all", label: "Tất cả" },
+  { value: "origami", label: "Origami" },
+  { value: "enso", label: "Enso" },
+  { value: "okyu", label: "Okyu" },
 ];
 
 const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -175,7 +175,7 @@ export default function EmployeesPage() {
                 isActive ? { backgroundColor: "var(--brand-color)" } : undefined
               }
             >
-              {tab.emoji} {tab.label}
+              {tab.label}
               {tab.value === "all" && (
                 <span className="ml-1 opacity-60">{employees.length}</span>
               )}

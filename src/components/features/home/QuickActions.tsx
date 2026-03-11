@@ -13,16 +13,7 @@ import {
   BarChart3,
 } from "lucide-react";
 
-// Màu nền icon theo HTML preview
-const ICON_BG: Record<string, string> = {
-  checklist: "#D8F3DC",
-  sick: "#FFF3CD",
-  tip: "#E8F4FD",
-  docs: "#F3E5F5",
-  approval: "#FFF3CD",
-  announce: "#E8F4FD",
-  team: "#F3E5F5",
-};
+
 
 // Tab cho tất cả role
 const BASE_ACTIONS = [
@@ -31,8 +22,6 @@ const BASE_ACTIONS = [
     label: "Checklist",
     href: "/checklist",
     icon: ClipboardList,
-    emoji: "📋",
-    bg: ICON_BG.checklist,
     hasBadge: true,
   },
   {
@@ -40,8 +29,6 @@ const BASE_ACTIONS = [
     label: "Báo ốm",
     href: "/hr/sick-report",
     icon: HeartPulse,
-    emoji: "😷",
-    bg: ICON_BG.sick,
     hasBadge: false,
   },
   {
@@ -49,8 +36,6 @@ const BASE_ACTIONS = [
     label: "Tip Pool",
     href: "/finance/tip-pool",
     icon: CircleDollarSign,
-    emoji: "💰",
-    bg: ICON_BG.tip,
     hasBadge: false,
   },
   {
@@ -58,8 +43,6 @@ const BASE_ACTIONS = [
     label: "Giấy tờ",
     href: "/hr/documents",
     icon: FileText,
-    emoji: "📄",
-    bg: ICON_BG.docs,
     hasBadge: false,
   },
 ];
@@ -71,8 +54,6 @@ const MANAGER_ACTIONS = [
     label: "Duyệt TK",
     href: "/admin/approval",
     icon: UserCheck,
-    emoji: "👥",
-    bg: ICON_BG.approval,
     hasBadge: true,
   },
   {
@@ -80,8 +61,6 @@ const MANAGER_ACTIONS = [
     label: "Thông báo",
     href: "/admin/announcements",
     icon: Megaphone,
-    emoji: "📢",
-    bg: ICON_BG.announce,
     hasBadge: false,
   },
   {
@@ -89,18 +68,9 @@ const MANAGER_ACTIONS = [
     label: "Team CL",
     href: "/checklist",
     icon: BarChart3,
-    emoji: "📊",
-    bg: ICON_BG.team,
     hasBadge: false,
   },
 ];
-
-// Màu surface theo quán (cho badge border)
-const SURFACE_COLORS: Record<string, string> = {
-  enso: "#D8F3DC",
-  origami: "#F5EFE6",
-  okyu: "#FFEBEE",
-};
 
 type QuickActionsProps = {
   role: string;
@@ -157,10 +127,6 @@ export default function QuickActions({ role, locationId }: QuickActionsProps) {
   // Build danh sách actions
   const actions = [...BASE_ACTIONS];
 
-  // Thay đổi icon bg checklist theo quán
-  const surfaceColor = SURFACE_COLORS[locationId] ?? SURFACE_COLORS.enso;
-  actions[0] = { ...actions[0], bg: surfaceColor };
-
   return (
     <div className="px-4 mb-[18px]">
       <h2
@@ -196,12 +162,11 @@ export default function QuickActions({ role, locationId }: QuickActionsProps) {
                 style={{
                   width: 50,
                   height: 50,
-                  background: action.bg,
-                  fontSize: 20,
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+                  background: "#f5f5f5",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
                 }}
               >
-                {action.emoji}
+                <action.icon size={20} strokeWidth={1.8} color="#555" />
                 {/* Badge đỏ */}
                 {badge > 0 && (
                   <span
@@ -255,12 +220,11 @@ export default function QuickActions({ role, locationId }: QuickActionsProps) {
                   style={{
                     width: 50,
                     height: 50,
-                    background: action.bg,
-                    fontSize: 20,
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
+                    background: "#f5f5f5",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
                   }}
                 >
-                  {action.emoji}
+                  <action.icon size={20} strokeWidth={1.8} color="#555" />
                   {badge > 0 && (
                     <span
                       className="absolute flex items-center justify-center rounded-full bg-red-500 text-white font-bold"
