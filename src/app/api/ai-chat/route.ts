@@ -82,10 +82,12 @@ export async function POST(req: NextRequest) {
       .then(() => {});
 
     return NextResponse.json({ reply: response });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("AI Chat error:", err);
+    const msg =
+      err instanceof Error ? err.message : "Lỗi kết nối AI. Vui lòng thử lại.";
     return NextResponse.json(
-      { error: "Lỗi kết nối AI. Vui lòng thử lại." },
+      { error: msg },
       { status: 500 },
     );
   }
