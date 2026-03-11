@@ -231,6 +231,13 @@ export default async function HrPage() {
           href: "/checklist/manage",
         },
         {
+          emoji: "📊",
+          iconBg: "#f0fdf4",
+          title: "Analytics",
+          subtitle: "Giờ làm, thống kê",
+          href: "/analytics",
+        },
+        {
           emoji: "👥",
           iconBg: "#fee2e2",
           title: "Duyệt tài khoản",

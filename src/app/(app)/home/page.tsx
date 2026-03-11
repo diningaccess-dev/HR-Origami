@@ -5,6 +5,7 @@ import HeroCard from "@/components/features/home/HeroCard";
 import QuickActions from "@/components/features/home/QuickActions";
 import AnnouncementList from "@/components/features/home/AnnouncementList";
 import PulseCheck from "@/components/features/home/PulseCheck";
+import OwnerDashboard from "@/components/features/home/OwnerDashboard";
 
 // Background surface theo quán
 const SCREEN_BG: Record<string, string> = {
@@ -103,6 +104,9 @@ export default async function HomePage() {
 
       {/* Spacer */}
       <div className="h-4" />
+
+      {/* Owner Dashboard */}
+      {role === "owner" && <OwnerDashboard />}
 
       {/* 2. Quick Actions */}
       <QuickActions role={role} locationId={locationId} />
