@@ -5,6 +5,7 @@ import BottomNav from "@/components/layout/BottomNav";
 import UrgentOverlay from "@/components/features/UrgentOverlay";
 import { getBrandColor } from "@/lib/utils/theme";
 import OfflineBanner from "@/components/ui/OfflineBanner";
+import AiChatFab from "@/components/features/AiChatFab";
 
 export default async function AppLayout({
   children,
@@ -53,6 +54,7 @@ export default async function AppLayout({
       {children}
       <OfflineBanner />
       <UrgentOverlay />
+      <AiChatFab />
       <BottomNav role={role} locationId={locationId} />
     </div>
   );

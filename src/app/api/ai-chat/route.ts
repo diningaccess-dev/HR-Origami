@@ -43,11 +43,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // Build system prompt
+    // Build system prompt — load handbook from DB if available
+    let handbookContent = "";
+    try {
+      const { data: handbookEntries } = await supabase
+        .from("company_handbook")
+        .select("title, content")
+        .order("title");
+
+      if (handbookEntries && handbookEntries.length > 0) {
+        handbookContent = handbookEntries
+          .map((h) => `### ${h.title}\n${h.content}`)
+          .join("\n\n");
+      }
+    } catch {
+      // Table doesn't exist yet — use default
+    }
+
     const systemPrompt = getSystemPrompt({
       userName: profile?.full_name ?? "Nhân viên",
       role: profile?.role ?? "staff",
       locationId: profile?.location_id ?? "enso",
+      handbookOverride: handbookContent || undefined,
     });
 
     // Initialize Gemini
