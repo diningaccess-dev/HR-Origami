@@ -89,6 +89,7 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
   }, [toast]);
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+  const weekKey = format(weekStart, "yyyy-MM-dd"); // stable string for deps
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   // ── Load data ────────────────────────────────────────
@@ -96,7 +97,6 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
     setLoading(true);
     const sb = supabase.current;
 
-    // Employees at location — no status filter to catch all
     const { data: emps } = await sb
       .from("profiles")
       .select("id, full_name, role")
@@ -107,8 +107,9 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
 
     setEmployees((emps ?? []) as Employee[]);
 
-    const wsISO = format(weekStart, "yyyy-MM-dd") + "T00:00:00";
-    const weISO = format(addDays(weekStart, 6), "yyyy-MM-dd") + "T23:59:59";
+    const wsISO = weekKey + "T00:00:00";
+    const weDate = addDays(new Date(weekKey), 6);
+    const weISO = format(weDate, "yyyy-MM-dd") + "T23:59:59";
 
     const { data: shiftData } = await sb
       .from("shifts")
@@ -121,7 +122,7 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
 
     setShifts((shiftData ?? []) as ShiftRow[]);
     setLoading(false);
-  }, [activeLoc, weekStart]);
+  }, [activeLoc, weekKey]);
 
   useEffect(() => {
     loadData();

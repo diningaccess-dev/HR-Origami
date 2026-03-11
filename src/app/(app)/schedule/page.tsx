@@ -49,6 +49,9 @@ export default function SchedulePage() {
           if (profile) {
             setRole(profile.role);
             setLocationId(profile.location_id ?? "enso");
+            if (profile.role === "manager" || profile.role === "owner") {
+              setViewMode("grid");
+            }
           }
         });
     });
@@ -176,11 +179,6 @@ export default function SchedulePage() {
   const bgColor = SCREEN_BG[locationId] ?? SCREEN_BG.enso;
 
   const yearLabel = format(selectedDate, "yyyy");
-
-  // Owner/Manager default to grid view
-  useEffect(() => {
-    if (isManager) setViewMode("grid");
-  }, [isManager]);
 
   // If grid mode, render completely different view
   if (isManager && viewMode === "grid") {
