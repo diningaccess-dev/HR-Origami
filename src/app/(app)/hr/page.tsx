@@ -2,7 +2,25 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import {
+  ChevronRight,
+  Thermometer,
+  Palmtree,
+  FileText,
+  Lock,
+  ShieldAlert,
+  Users,
+  ClipboardList,
+  BarChart3,
+  UserCheck,
+  Megaphone,
+  Coins,
+  BookOpen,
+  Trophy,
+  Bot,
+  FileBarChart,
+  AlertTriangle,
+} from "lucide-react";
 import SignOutButton from "@/app/(app)/hr/SignOutButton";
 
 // ── Helpers ────────────────────────────────────────────────
@@ -45,8 +63,7 @@ const SCREEN_BG: Record<string, string> = {
 
 // ── Menu config ────────────────────────────────────────────
 type MenuItem = {
-  emoji: string;
-  iconBg: string;
+  icon: string;
   title: string;
   subtitle?: string;
   href: string;
@@ -136,27 +153,24 @@ export default async function HrPage() {
   // Azubi: nhóm Học tập (nổi bật, hiện trước)
   if (isAzubi) {
     groups.push({
-      label: "Học tập ✨",
+      label: "Học tập",
       labelColor: brandColor,
       borderColor: brandLight,
       items: [
         {
-          emoji: "📚",
-          iconBg: brandLight,
+          icon: "BookOpen",
           title: "Studyhub",
           subtitle: "Khóa học & bài thi",
           href: "/studyhub",
         },
         {
-          emoji: "🏆",
-          iconBg: "#fef9c3",
+          icon: "Trophy",
           title: "Leaderboard XP",
           subtitle: "Xem xếp hạng",
           href: "/studyhub/leaderboard",
         },
         {
-          emoji: "🤖",
-          iconBg: "#ede9fe",
+          icon: "Bot",
           title: "AI Colleague",
           subtitle: "Hỏi đáp 24/7",
           href: "/ai",
@@ -170,22 +184,19 @@ export default async function HrPage() {
     label: "Cá nhân",
     items: [
       {
-        emoji: "😷",
-        iconBg: "#fef3c7",
+        icon: "Thermometer",
         title: "Báo ốm",
         subtitle: "Xin nghỉ & gửi AU",
         href: "/hr/sick-report",
       },
       {
-        emoji: "🏖️",
-        iconBg: "#dbeafe",
+        icon: "Palmtree",
         title: "Nghỉ phép",
         subtitle: "Urlaub & Sonderurlaub",
         href: "/schedule/leave",
       },
       {
-        emoji: "📄",
-        iconBg: "#e0f2fe",
+        icon: "FileText",
         title: "Giấy tờ",
         subtitle: expiringDocs
           ? `${expiringDocs} giấy tờ sắp hết hạn`
@@ -196,14 +207,12 @@ export default async function HrPage() {
           : {}),
       },
       {
-        emoji: "🔒",
-        iconBg: "#ede9fe",
+        icon: "Lock",
         title: "Đổi mật khẩu",
         href: "/hr/change-password",
       },
       {
-        emoji: "🚨",
-        iconBg: "#f3f4f6",
+        icon: "ShieldAlert",
         title: "Tố cáo ẩn danh",
         subtitle: "Hoàn toàn bảo mật",
         href: "/hr/whistleblower",
@@ -217,29 +226,25 @@ export default async function HrPage() {
       label: "Quản trị",
       items: [
         {
-          emoji: "👤",
-          iconBg: "#dbeafe",
+          icon: "Users",
           title: "Quản lý nhân viên",
           subtitle: "Tạo & sửa tài khoản",
           href: "/admin/employees",
         },
         {
-          emoji: "📋",
-          iconBg: "#e0f2fe",
+          icon: "ClipboardList",
           title: "Quản lý Checklist",
           subtitle: "Thêm, sửa, gán checklist",
           href: "/checklist/manage",
         },
         {
-          emoji: "📊",
-          iconBg: "#f0fdf4",
+          icon: "BarChart3",
           title: "Analytics",
           subtitle: "Giờ làm, thống kê",
           href: "/analytics",
         },
         {
-          emoji: "👥",
-          iconBg: "#fee2e2",
+          icon: "UserCheck",
           title: "Duyệt tài khoản",
           subtitle:
             pendingCount > 0
@@ -251,15 +256,13 @@ export default async function HrPage() {
             : {}),
         },
         {
-          emoji: "📢",
-          iconBg: "#fef3c7",
+          icon: "Megaphone",
           title: "Thông báo",
           subtitle: "Gửi thông báo toàn quán",
           href: "/admin/announcements",
         },
         {
-          emoji: "💰",
-          iconBg: "#d1fae5",
+          icon: "Coins",
           title: "Tip Pool",
           subtitle: "Chia tip cho nhân viên",
           href: "/finance/tip-pool",
@@ -274,15 +277,13 @@ export default async function HrPage() {
       label: "Hệ thống",
       items: [
         {
-          emoji: "📋",
-          iconBg: "#e0f2fe",
+          icon: "FileBarChart",
           title: "Báo cáo tổng hợp",
           subtitle: "Doanh thu & hiệu suất",
           href: "/admin/reports",
         },
         {
-          emoji: "🚨",
-          iconBg: "#fee2e2",
+          icon: "AlertTriangle",
           title: "Tố cáo (xem)",
           subtitle: "Xem đơn tố cáo ẩn danh",
           href: "/admin/whistleblower",
@@ -429,17 +430,39 @@ export default async function HrPage() {
                   }}
                 >
                   {/* Icon */}
-                  <div
-                    className="flex shrink-0 items-center justify-center rounded-[10px]"
-                    style={{
-                      width: 32,
-                      height: 32,
-                      fontSize: 15,
-                      background: item.iconBg,
-                    }}
-                  >
-                    {item.emoji}
-                  </div>
+                  {(() => {
+                    const ICON_MAP: Record<string, React.ReactNode> = {
+                      Thermometer: <Thermometer size={16} />,
+                      Palmtree: <Palmtree size={16} />,
+                      FileText: <FileText size={16} />,
+                      Lock: <Lock size={16} />,
+                      ShieldAlert: <ShieldAlert size={16} />,
+                      Users: <Users size={16} />,
+                      ClipboardList: <ClipboardList size={16} />,
+                      BarChart3: <BarChart3 size={16} />,
+                      UserCheck: <UserCheck size={16} />,
+                      Megaphone: <Megaphone size={16} />,
+                      Coins: <Coins size={16} />,
+                      BookOpen: <BookOpen size={16} />,
+                      Trophy: <Trophy size={16} />,
+                      Bot: <Bot size={16} />,
+                      FileBarChart: <FileBarChart size={16} />,
+                      AlertTriangle: <AlertTriangle size={16} />,
+                    };
+                    return (
+                      <div
+                        className="flex shrink-0 items-center justify-center"
+                        style={{
+                          width: 32,
+                          height: 32,
+                          color: brandColor,
+                          opacity: 0.7,
+                        }}
+                      >
+                        {ICON_MAP[item.icon] ?? <ChevronRight size={16} />}
+                      </div>
+                    );
+                  })()}
 
                   {/* Text */}
                   <div className="flex-1 min-w-0">
