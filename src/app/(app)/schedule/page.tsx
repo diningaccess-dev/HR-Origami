@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { format, startOfWeek } from "date-fns";
+import { format, startOfWeek, differenceInMinutes } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
-import { Plus } from "lucide-react";
+import { Plus, Briefcase, Palmtree, ArrowRightLeft } from "lucide-react";
+import Link from "next/link";
 import WeekStrip from "@/components/features/schedule/WeekStrip";
 import ShiftCard from "@/components/features/schedule/ShiftCard";
 import type { ShiftData } from "@/components/features/schedule/ShiftCard";
@@ -263,6 +264,65 @@ export default function SchedulePage() {
         ) : (
           shifts.map((shift) => <ShiftCard key={shift.id} shift={shift} />)
         )}
+
+        {/* ── Hours summary ───────────────────────────────────── */}
+        {!loading && shifts.length > 0 && (
+          <div
+            className="rounded-[18px] bg-white p-4 flex items-center justify-between"
+            style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.04)" }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-white"
+                style={{ background: "var(--brand-color)" }}
+              >
+                <Briefcase size={18} />
+              </div>
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "#1a1a1a" }}>
+                  {shifts.length} ca hôm nay
+                </p>
+                <p style={{ fontSize: 11, color: "#aaa" }}>
+                  Tổng:{" "}
+                  {(() => {
+                    const totalMins = shifts.reduce((sum, s) => {
+                      return sum + differenceInMinutes(new Date(s.end_time), new Date(s.start_time));
+                    }, 0);
+                    const h = Math.floor(totalMins / 60);
+                    const m = totalMins % 60;
+                    return m > 0 ? `${h}h${m}m` : `${h} giờ`;
+                  })()}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Quick links ─────────────────────────────────────── */}
+        <div className="flex gap-2 mt-1">
+          <Link
+            href="/schedule/leave"
+            prefetch={true}
+            className="flex-1 flex items-center gap-2 rounded-[14px] bg-white px-3.5 py-3 transition-transform active:scale-[0.97]"
+            style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.04)" }}
+          >
+            <Palmtree size={16} style={{ color: "var(--brand-color)" }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#444" }}>
+              Nghỉ phép
+            </span>
+          </Link>
+          <Link
+            href="/schedule/marketplace"
+            prefetch={true}
+            className="flex-1 flex items-center gap-2 rounded-[14px] bg-white px-3.5 py-3 transition-transform active:scale-[0.97]"
+            style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.04)" }}
+          >
+            <ArrowRightLeft size={16} style={{ color: "var(--brand-color)" }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#444" }}>
+              Chợ ca
+            </span>
+          </Link>
+        </div>
       </div>
 
       {/* ── FAB (manager/owner) ────────────────────────────── */}
