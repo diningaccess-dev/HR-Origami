@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { ArrowLeft, Send } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // ── Types ────────────────────────────────────────────────────
 type Shift = {
@@ -35,11 +37,14 @@ const ROLE_TAG_LABELS: Record<string, string> = {
 
 // ── Component ────────────────────────────────────────────────
 export default function MarketplacePage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [myShifts, setMyShifts] = useState<Shift[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null); // shift id đang xử lý
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [showPostModal, setShowPostModal] = useState(false);
 
   const supabase = useRef(createClient());
   const isManager = profile?.role === "manager" || profile?.role === "owner";
@@ -113,6 +118,22 @@ export default function MarketplacePage() {
     }));
 
     setShifts(mapped);
+
+    // Lấy ca sắp tới của user (chưa marketplace) để cho phép đăng
+    if (!isManager) {
+      const todayStr = format(new Date(), "yyyy-MM-dd") + "T00:00:00";
+      const { data: upcoming } = await sb
+        .from("shifts")
+        .select("id, location_id, profile_id, role_tag, start_time, end_time, status, is_marketplace")
+        .eq("profile_id", user.id)
+        .eq("is_marketplace", false)
+        .eq("status", "scheduled")
+        .gte("start_time", todayStr)
+        .order("start_time", { ascending: true })
+        .limit(10);
+      setMyShifts((upcoming ?? []) as Shift[]);
+    }
+
     setIsLoading(false);
   }, []);
 
@@ -197,13 +218,31 @@ export default function MarketplacePage() {
   const pendingShifts = shifts.filter((s) => s.status === "filled");
 
   return (
-    <div className="mx-auto max-w-md px-4 py-6 space-y-5">
+    <div className="mx-auto max-w-md px-4 py-5 pb-28 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Chợ Ca</h1>
-        <p className="text-xs text-foreground/50">
-          {isManager ? "Duyệt hoán đổi ca" : "Nhận ca từ đồng nghiệp"}
-        </p>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.back()}
+          className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground/5 transition-transform active:scale-90"
+        >
+          <ArrowLeft size={18} strokeWidth={2} />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-lg font-bold text-foreground">Chợ Ca</h1>
+          <p className="text-xs text-foreground/50">
+            {isManager ? "Duyệt hoán đổi ca" : "Nhận & đăng ca"}
+          </p>
+        </div>
+        {!isManager && (
+          <button
+            onClick={() => setShowPostModal(true)}
+            className="flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold text-white transition-all active:scale-95"
+            style={{ backgroundColor: brandColor }}
+          >
+            <Send size={14} strokeWidth={2.5} />
+            Đăng ca
+          </button>
+        )}
       </div>
 
       {/* Toast */}
@@ -287,6 +326,78 @@ export default function MarketplacePage() {
           ))
         )}
       </section>
+
+      {/* ── Post modal (staff) ────────────────────────────── */}
+      {showPostModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div
+            className="w-full max-w-md rounded-3xl bg-background p-5 pb-6 animate-in fade-in zoom-in-95 duration-200 overflow-hidden flex flex-col"
+            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.2)", maxHeight: "80dvh" }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-foreground">
+                📤 Đăng ca lên chợ
+              </h2>
+              <button
+                onClick={() => setShowPostModal(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground/5 text-foreground/50"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {myShifts.length === 0 ? (
+                <div className="py-10 text-center">
+                  <p className="text-sm text-foreground/40">
+                    Không có ca nào có thể đăng
+                  </p>
+                  <p className="mt-1 text-xs text-foreground/30">
+                    Chỉ các ca sắp tới mới có thể đăng
+                  </p>
+                </div>
+              ) : (
+                myShifts.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center gap-3 rounded-2xl border border-foreground/10 p-3.5"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground">
+                        {format(new Date(s.start_time), "EEEE dd.MM", { locale: de })}
+                      </p>
+                      <p className="text-xs text-foreground/40">
+                        {format(new Date(s.start_time), "HH:mm")} —{" "}
+                        {format(new Date(s.end_time), "HH:mm")}
+                        {" · "}
+                        {ROLE_TAG_LABELS[s.role_tag] ?? s.role_tag}
+                      </p>
+                    </div>
+                    <button
+                      disabled={actionLoading === s.id}
+                      onClick={async () => {
+                        setActionLoading(s.id);
+                        await supabase.current
+                          .from("shifts")
+                          .update({ is_marketplace: true, status: "open", profile_id: null })
+                          .eq("id", s.id);
+                        setToast("Đã đăng ca lên chợ ✓");
+                        setActionLoading(null);
+                        setShowPostModal(false);
+                        await loadData();
+                      }}
+                      className="shrink-0 rounded-xl px-3 py-2 text-xs font-semibold text-white transition-all active:scale-95 disabled:opacity-40"
+                      style={{ backgroundColor: brandColor }}
+                    >
+                      {actionLoading === s.id ? "..." : "Đăng"}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
