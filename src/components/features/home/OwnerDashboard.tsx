@@ -26,9 +26,9 @@ type LocationStats = {
 };
 
 const LOCATIONS = [
-  { id: "origami", label: "Origami", emoji: "🍣", color: "#f59e0b" },
-  { id: "enso", label: "Enso", emoji: "🍜", color: "#22c55e" },
-  { id: "okyu", label: "Okyu", emoji: "🍶", color: "#ef4444" },
+  { id: "origami", label: "Origami", initial: "O", color: "#f59e0b" },
+  { id: "enso", label: "Enso", initial: "E", color: "#22c55e" },
+  { id: "okyu", label: "Okyu", initial: "K", color: "#ef4444" },
 ];
 
 /* ══════════════════════════════════════════════════════
@@ -53,7 +53,7 @@ export default function OwnerDashboard() {
         .from("profiles")
         .select("id", { count: "exact", head: true })
         .eq("location_id", loc.id)
-        .eq("status", "active");
+        .in("status", ["active", "approved"]);
 
       // Shifts today
       const { count: shiftsToday } = await sb
@@ -136,7 +136,7 @@ export default function OwnerDashboard() {
           boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
         }}
       >
-        <div className="absolute -right-4 -top-4 opacity-10 text-[80px]">🏯</div>
+
         <p className="text-xs font-medium opacity-70 mb-1">Tổng quan hôm nay</p>
         <div className="flex items-end gap-6">
           <div>
@@ -180,7 +180,12 @@ export default function OwnerDashboard() {
                   {pending}
                 </div>
               )}
-              <span className="text-xl">{locInfo.emoji}</span>
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold text-white"
+                style={{ backgroundColor: locInfo.color }}
+              >
+                {locInfo.initial}
+              </div>
               <p className="text-xs font-bold text-foreground mt-1">{loc.label}</p>
               <div className="mt-2 space-y-1">
                 <div className="flex items-center gap-1.5">

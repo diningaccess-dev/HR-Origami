@@ -11,7 +11,7 @@ import {
   subWeeks,
 } from "date-fns";
 import { de } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, X, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Plus, ArrowLeftRight } from "lucide-react";
 
 /* ── Types ──────────────────────────────────────────── */
 type ShiftRow = {
@@ -30,11 +30,11 @@ type Employee = {
 };
 
 /* ── Shift color by time ────────────────────────────── */
-function shiftColor(startHour: number): { bg: string; text: string; label: string } {
+function shiftColor(startHour: number): { bg: string; border: string; text: string } {
   if (startHour < 15) {
-    return { bg: "#fef9c3", text: "#a16207", label: "Ca 1" }; // yellow
+    return { bg: "#fef9c3", border: "#eab30840", text: "#92400e" };
   }
-  return { bg: "#fee2e2", text: "#dc2626", label: "Ca 2" }; // red
+  return { bg: "#fce4ec", border: "#ef444440", text: "#b91c1c" };
 }
 
 /* ── Props ──────────────────────────────────────────── */
@@ -50,9 +50,7 @@ const LOCATIONS = [
   { id: "okyu", label: "Okyu" },
 ];
 
-/* ══════════════════════════════════════════════════════
-   ScheduleGrid
-   ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════ */
 export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: ScheduleGridProps) {
   const supabase = useRef(createClient());
 
@@ -62,11 +60,9 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Drag state
   const [dragShift, setDragShift] = useState<ShiftRow | null>(null);
   const [dropTarget, setDropTarget] = useState<{ empId: string; dayIdx: number } | null>(null);
 
-  // Confirm modal
   const [confirmModal, setConfirmModal] = useState<{
     shift: ShiftRow;
     fromName: string;
@@ -74,7 +70,6 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
     toId: string;
   } | null>(null);
 
-  // New shift modal
   const [newShiftModal, setNewShiftModal] = useState<{
     empId: string;
     empName: string;
@@ -93,7 +88,6 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
     return () => clearTimeout(t);
   }, [toast]);
 
-  // ── Week days ────────────────────────────────────────
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -102,17 +96,17 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
     setLoading(true);
     const sb = supabase.current;
 
-    // Employees at location
+    // Employees at location — no status filter to catch all
     const { data: emps } = await sb
       .from("profiles")
       .select("id, full_name, role")
       .eq("location_id", activeLoc)
-      .eq("status", "active")
+      .in("status", ["active", "approved"])
+      .neq("role", "owner")
       .order("full_name");
 
     setEmployees((emps ?? []) as Employee[]);
 
-    // Shifts for the week
     const wsISO = format(weekStart, "yyyy-MM-dd") + "T00:00:00";
     const weISO = format(addDays(weekStart, 6), "yyyy-MM-dd") + "T23:59:59";
 
@@ -133,17 +127,13 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
     loadData();
   }, [loadData]);
 
-  // ── Get shifts for a cell ────────────────────────────
   function getCellShifts(empId: string, dayIdx: number): ShiftRow[] {
     const dayStr = format(weekDays[dayIdx], "yyyy-MM-dd");
     return shifts.filter(
-      (s) =>
-        s.profile_id === empId &&
-        s.start_time.startsWith(dayStr),
+      (s) => s.profile_id === empId && s.start_time.startsWith(dayStr),
     );
   }
 
-  // ── Drag handlers ────────────────────────────────────
   function handleDragStart(shift: ShiftRow) {
     setDragShift(shift);
   }
@@ -163,10 +153,8 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
       setDropTarget(null);
       return;
     }
-
     const fromEmp = employees.find((e) => e.id === dragShift.profile_id);
     const toEmp = employees.find((e) => e.id === empId);
-
     setConfirmModal({
       shift: dragShift,
       fromName: fromEmp?.full_name ?? "—",
@@ -177,30 +165,22 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
     setDropTarget(null);
   }
 
-  // ── Confirm transfer ─────────────────────────────────
   async function confirmTransfer() {
     if (!confirmModal) return;
-
     await supabase.current
       .from("shifts")
       .update({ profile_id: confirmModal.toId })
       .eq("id", confirmModal.shift.id);
-
-    setToast(
-      `Ca đã chuyển cho ${confirmModal.toName} ✓`,
-    );
+    setToast(`Ca đã chuyển cho ${confirmModal.toName}`);
     setConfirmModal(null);
     await loadData();
   }
 
-  // ── Create new shift ──────────────────────────────────
   async function handleCreateShift() {
     if (!newShiftModal) return;
     setCreating(true);
-
     const startTime = `${newShiftModal.date}T${newStart}:00`;
     const endTime = `${newShiftModal.date}T${newEnd}:00`;
-
     await supabase.current.from("shifts").insert({
       profile_id: newShiftModal.empId,
       location_id: activeLoc,
@@ -210,33 +190,30 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
       status: "scheduled",
       is_marketplace: false,
     });
-
-    setToast("Đã tạo ca ✓");
+    setToast("Đã tạo ca thành công");
     setNewShiftModal(null);
     setCreating(false);
     await loadData();
   }
 
-  // ── Week nav ─────────────────────────────────────────
   function goWeek(dir: -1 | 1) {
     if ("vibrate" in navigator) navigator.vibrate(5);
     setCurrentWeek(dir === -1 ? subWeeks(currentWeek, 1) : addWeeks(currentWeek, 1));
   }
 
-  // ── Render ───────────────────────────────────────────
   return (
     <div className="animate-in fade-in duration-300">
-      {/* ── Location tabs (Owner only) ─────────────── */}
+      {/* Location tabs (Owner only) */}
       {isOwner && (
         <div className="flex gap-1 px-4 pt-3 pb-1">
           {LOCATIONS.map((loc) => (
             <button
               key={loc.id}
               onClick={() => setActiveLoc(loc.id)}
-              className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
                 activeLoc === loc.id
-                  ? "text-white"
-                  : "text-foreground/50 bg-foreground/5"
+                  ? "text-white shadow-sm"
+                  : "text-foreground/50 bg-foreground/5 hover:bg-foreground/8"
               }`}
               style={
                 activeLoc === loc.id
@@ -250,69 +227,77 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
         </div>
       )}
 
-      {/* ── Week header ────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 py-2">
+      {/* Week header */}
+      <div className="flex items-center justify-between px-4 py-2.5">
         <button
           onClick={() => goWeek(-1)}
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground/5 transition-transform active:scale-90"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-foreground/10 bg-white transition-transform active:scale-90"
         >
-          <ChevronLeft size={16} strokeWidth={2.5} />
+          <ChevronLeft size={16} strokeWidth={2} />
         </button>
-        <span className="text-sm font-bold text-foreground">
+        <span className="text-sm font-semibold text-foreground" style={{ fontFamily: "Sora, sans-serif" }}>
           {format(weekStart, "dd.MM")} — {format(addDays(weekStart, 6), "dd.MM.yyyy")}
         </span>
         <button
           onClick={() => goWeek(1)}
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground/5 transition-transform active:scale-90"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-foreground/10 bg-white transition-transform active:scale-90"
         >
-          <ChevronRight size={16} strokeWidth={2.5} />
+          <ChevronRight size={16} strokeWidth={2} />
         </button>
       </div>
 
-      {/* ── Toast ──────────────────────────────────── */}
+      {/* Toast */}
       {toast && (
-        <div className="mx-4 mb-2 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-2 text-center text-sm text-emerald-700 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="mx-4 mb-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2 text-center text-sm font-medium text-emerald-700 animate-in fade-in slide-in-from-top-2 duration-200">
           {toast}
         </div>
       )}
 
-      {/* ── Grid table ─────────────────────────────── */}
+      {/* Grid table */}
       {loading ? (
         <div className="px-4 space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-xl bg-foreground/10" />
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-12 animate-pulse rounded-lg bg-foreground/6" />
           ))}
         </div>
       ) : (
         <div className="overflow-x-auto px-2 pb-28">
           <table className="w-full border-collapse" style={{ minWidth: 700 }}>
-            {/* Day headers */}
             <thead>
-              <tr>
+              <tr className="bg-foreground/[0.02]">
                 <th
-                  className="sticky left-0 z-10 bg-background border-b border-foreground/10 px-2 py-2 text-left"
-                  style={{ width: 120, minWidth: 120 }}
+                  className="sticky left-0 z-10 bg-white border-b border-r border-foreground/8 px-3 py-2.5 text-left"
+                  style={{ width: 130, minWidth: 130 }}
                 >
-                  <span className="text-[10px] font-bold uppercase text-foreground/40 tracking-wider">
+                  <span className="text-[10px] font-semibold uppercase text-foreground/40 tracking-wider">
                     Nhân viên
                   </span>
                 </th>
                 {weekDays.map((day, i) => {
                   const today = isToday(day);
+                  const isSun = i === 6;
                   return (
                     <th
                       key={i}
-                      className={`border-b border-foreground/10 px-1 py-2 text-center ${
-                        today ? "bg-blue-50/50 dark:bg-blue-950/20" : ""
+                      className={`border-b border-foreground/8 px-1 py-2.5 text-center ${
+                        today ? "bg-blue-50/80" : ""
                       }`}
-                      style={{ minWidth: 80 }}
+                      style={{ minWidth: 85 }}
                     >
-                      <div className="text-[9px] font-bold uppercase text-foreground/40 tracking-wider">
+                      <div
+                        className={`text-[9px] font-semibold uppercase tracking-wider ${
+                          isSun ? "text-red-400" : "text-foreground/35"
+                        }`}
+                      >
                         {DAY_LABELS[i]}
                       </div>
                       <div
-                        className={`text-sm font-bold ${
-                          today ? "text-blue-600" : "text-foreground"
+                        className={`text-sm font-bold mt-0.5 ${
+                          today
+                            ? "text-white bg-blue-500 rounded-md w-7 h-6 flex items-center justify-center mx-auto"
+                            : isSun
+                              ? "text-red-400"
+                              : "text-foreground/70"
                         }`}
                       >
                         {format(day, "dd")}
@@ -323,46 +308,40 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
               </tr>
             </thead>
 
-            {/* Employee rows */}
             <tbody>
               {employees.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="py-12 text-center text-sm text-foreground/30"
-                  >
-                    Chưa có nhân viên
+                  <td colSpan={8} className="py-16 text-center text-sm text-foreground/30">
+                    Chưa có nhân viên tại quán này
                   </td>
                 </tr>
               )}
-              {employees.map((emp) => (
-                <tr key={emp.id} className="border-b border-foreground/5">
-                  {/* Employee name (sticky) */}
+              {employees.map((emp, empIdx) => (
+                <tr
+                  key={emp.id}
+                  className={`border-b border-foreground/5 ${empIdx % 2 === 0 ? "bg-white" : "bg-foreground/[0.015]"}`}
+                >
                   <td
-                    className="sticky left-0 z-10 bg-background px-2 py-1.5"
-                    style={{ width: 120 }}
+                    className={`sticky left-0 z-10 border-r border-foreground/8 px-3 py-2 ${empIdx % 2 === 0 ? "bg-white" : "bg-[#fafafb]"}`}
+                    style={{ width: 130 }}
                   >
                     <div className="flex items-center gap-2">
                       <div
                         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                        style={{ backgroundColor: "var(--brand-color)" }}
+                        style={{ backgroundColor: "var(--brand-color)", opacity: 0.85 }}
                       >
-                        {emp.full_name[0]}
+                        {emp.full_name[0]?.toUpperCase()}
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-foreground truncate" style={{ maxWidth: 80 }}>
-                          {emp.full_name}
-                        </p>
-                      </div>
+                      <p className="text-[11px] font-medium text-foreground/80 truncate leading-tight" style={{ maxWidth: 85 }}>
+                        {emp.full_name}
+                      </p>
                     </div>
                   </td>
 
-                  {/* Day cells */}
                   {weekDays.map((day, dayIdx) => {
                     const cellShifts = getCellShifts(emp.id, dayIdx);
                     const isDropHere =
-                      dropTarget?.empId === emp.id &&
-                      dropTarget?.dayIdx === dayIdx;
+                      dropTarget?.empId === emp.id && dropTarget?.dayIdx === dayIdx;
                     const today = isToday(day);
 
                     return (
@@ -370,9 +349,9 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
                         key={dayIdx}
                         className={`px-0.5 py-1 align-top transition-colors ${
                           isDropHere
-                            ? "bg-blue-100/60 dark:bg-blue-900/30"
+                            ? "bg-blue-100/70"
                             : today
-                              ? "bg-blue-50/30 dark:bg-blue-950/10"
+                              ? "bg-blue-50/40"
                               : ""
                         }`}
                         onDragOver={(e) => handleDragOver(e, emp.id, dayIdx)}
@@ -389,15 +368,17 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
                             setNewEnd("15:00");
                           }
                         }}
-                        style={{ cursor: cellShifts.length === 0 ? "pointer" : "default" }}
+                        style={{ cursor: cellShifts.length === 0 ? "pointer" : "default", minHeight: 40 }}
                       >
                         {cellShifts.length === 0 && (
-                          <div className="flex h-10 items-center justify-center opacity-0 hover:opacity-30 transition-opacity">
-                            <Plus size={14} className="text-foreground/30" />
+                          <div className="flex h-9 items-center justify-center opacity-0 hover:opacity-20 transition-opacity">
+                            <Plus size={12} className="text-foreground/30" />
                           </div>
                         )}
                         {cellShifts.map((s) => {
-                          const startH = new Date(s.start_time).getHours() + new Date(s.start_time).getMinutes() / 60;
+                          const startH =
+                            new Date(s.start_time).getHours() +
+                            new Date(s.start_time).getMinutes() / 60;
                           const colors = shiftColor(startH);
                           const startStr = format(new Date(s.start_time), "HH:mm");
                           const endStr = format(new Date(s.end_time), "HH:mm");
@@ -407,22 +388,16 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
                               key={s.id}
                               draggable
                               onDragStart={() => handleDragStart(s)}
-                              className="mb-0.5 cursor-grab rounded-lg px-1.5 py-1 text-center transition-all active:cursor-grabbing active:scale-95 hover:shadow-sm"
+                              className="mb-0.5 cursor-grab rounded-md px-1.5 py-1 text-center transition-all active:cursor-grabbing active:scale-95 hover:shadow-sm"
                               style={{
                                 backgroundColor: colors.bg,
-                                border: `1px solid ${colors.text}30`,
+                                borderLeft: `3px solid ${colors.text}`,
                               }}
                             >
-                              <p
-                                className="text-[10px] font-bold leading-tight"
-                                style={{ color: colors.text }}
-                              >
+                              <p className="text-[10px] font-bold leading-tight" style={{ color: colors.text }}>
                                 {startStr}
                               </p>
-                              <p
-                                className="text-[9px] leading-tight"
-                                style={{ color: `${colors.text}90` }}
-                              >
+                              <p className="text-[9px] leading-tight" style={{ color: `${colors.text}99` }}>
                                 {endStr}
                               </p>
                             </div>
@@ -438,45 +413,46 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
         </div>
       )}
 
-      {/* ── Confirm Modal ──────────────────────────── */}
+      {/* Confirm Modal */}
       {confirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div
-            className="w-full max-w-sm rounded-3xl bg-background p-5 animate-in fade-in zoom-in-95 duration-200"
-            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.2)" }}
+            className="w-full max-w-sm rounded-2xl bg-white p-5 animate-in fade-in zoom-in-95 duration-200"
+            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}
           >
-            <h3 className="text-base font-bold text-foreground mb-3">
-              🔄 Chuyển ca?
-            </h3>
-            <div className="space-y-2 mb-4">
+            <div className="flex items-center gap-2 mb-4">
+              <ArrowLeftRight size={16} style={{ color: "var(--brand-color)" }} />
+              <h3 className="text-sm font-bold text-foreground">Chuyển ca</h3>
+            </div>
+            <div className="space-y-2 mb-5 bg-foreground/[0.02] rounded-lg p-3">
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-foreground/50">Từ:</span>
+                <span className="text-foreground/40 min-w-[32px]">Từ</span>
                 <span className="font-semibold text-foreground">{confirmModal.fromName}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-foreground/50">Sang:</span>
+                <span className="text-foreground/40 min-w-[32px]">Sang</span>
                 <span className="font-semibold text-foreground">{confirmModal.toName}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-foreground/50">Ca:</span>
-                <span className="font-semibold text-foreground">
+                <span className="text-foreground/40 min-w-[32px]">Ca</span>
+                <span className="font-medium text-foreground/70">
                   {format(new Date(confirmModal.shift.start_time), "HH:mm")} —{" "}
-                  {format(new Date(confirmModal.shift.end_time), "HH:mm")}{" "}
-                  ({format(new Date(confirmModal.shift.start_time), "EEEE dd.MM", { locale: de })})
+                  {format(new Date(confirmModal.shift.end_time), "HH:mm")},{" "}
+                  {format(new Date(confirmModal.shift.start_time), "EEEE dd.MM", { locale: de })}
                 </span>
               </div>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={confirmTransfer}
-                className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.97]"
+                className="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.97]"
                 style={{ backgroundColor: "var(--brand-color)" }}
               >
-                ✓ Xác nhận
+                Xác nhận
               </button>
               <button
                 onClick={() => setConfirmModal(null)}
-                className="flex-1 rounded-xl border border-foreground/10 py-2.5 text-sm font-semibold text-foreground/50 transition-all active:scale-[0.97]"
+                className="flex-1 rounded-lg border border-foreground/10 py-2.5 text-sm font-semibold text-foreground/50 transition-all active:scale-[0.97]"
               >
                 Hủy
               </button>
@@ -485,22 +461,20 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
         </div>
       )}
 
-      {/* ── New Shift Modal ────────────────────────── */}
+      {/* New Shift Modal */}
       {newShiftModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div
-            className="w-full max-w-sm rounded-3xl bg-background p-5 animate-in fade-in zoom-in-95 duration-200"
-            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.2)" }}
+            className="w-full max-w-sm rounded-2xl bg-white p-5 animate-in fade-in zoom-in-95 duration-200"
+            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-foreground">
-                ➕ Thêm ca
-              </h3>
+              <h3 className="text-sm font-bold text-foreground">Thêm ca</h3>
               <button
                 onClick={() => setNewShiftModal(null)}
-                className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground/5"
+                className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground/5 hover:bg-foreground/10 transition-colors"
               >
-                <X size={16} color="#999" />
+                <X size={14} color="#999" />
               </button>
             </div>
 
@@ -513,34 +487,24 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
               <button
                 type="button"
                 onClick={() => { setNewStart("10:30"); setNewEnd("15:00"); }}
-                className={`rounded-xl py-2.5 text-xs font-semibold transition-all active:scale-95 ${
+                className={`rounded-lg py-2.5 text-xs font-semibold transition-all active:scale-95 border ${
                   newStart === "10:30" && newEnd === "15:00"
-                    ? "text-white"
-                    : "bg-foreground/5 text-foreground/60"
+                    ? "text-amber-800 bg-amber-50 border-amber-200"
+                    : "bg-foreground/[0.02] border-foreground/8 text-foreground/50"
                 }`}
-                style={
-                  newStart === "10:30" && newEnd === "15:00"
-                    ? { backgroundColor: "#eab308" }
-                    : undefined
-                }
               >
-                🟡 Ca 1: 10:30–15:00
+                Ca 1 · 10:30–15:00
               </button>
               <button
                 type="button"
                 onClick={() => { setNewStart("15:00"); setNewEnd("22:00"); }}
-                className={`rounded-xl py-2.5 text-xs font-semibold transition-all active:scale-95 ${
+                className={`rounded-lg py-2.5 text-xs font-semibold transition-all active:scale-95 border ${
                   newStart === "15:00" && newEnd === "22:00"
-                    ? "text-white"
-                    : "bg-foreground/5 text-foreground/60"
+                    ? "text-red-800 bg-red-50 border-red-200"
+                    : "bg-foreground/[0.02] border-foreground/8 text-foreground/50"
                 }`}
-                style={
-                  newStart === "15:00" && newEnd === "22:00"
-                    ? { backgroundColor: "#ef4444" }
-                    : undefined
-                }
               >
-                🔴 Ca 2: 15:00–22:00
+                Ca 2 · 15:00–22:00
               </button>
             </div>
 
@@ -552,7 +516,7 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
                   type="time"
                   value={newStart}
                   onChange={(e) => setNewStart(e.target.value)}
-                  className="w-full rounded-xl border border-foreground/10 px-2 py-2 text-sm"
+                  className="w-full rounded-lg border border-foreground/10 px-2.5 py-2 text-sm"
                 />
               </div>
               <div>
@@ -561,7 +525,7 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
                   type="time"
                   value={newEnd}
                   onChange={(e) => setNewEnd(e.target.value)}
-                  className="w-full rounded-xl border border-foreground/10 px-2 py-2 text-sm"
+                  className="w-full rounded-lg border border-foreground/10 px-2.5 py-2 text-sm"
                 />
               </div>
             </div>
@@ -577,10 +541,10 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
                   key={r.v}
                   type="button"
                   onClick={() => setNewRole(r.v)}
-                  className={`rounded-xl py-1.5 text-xs font-semibold transition-all active:scale-95 ${
+                  className={`rounded-lg py-1.5 text-xs font-semibold transition-all active:scale-95 ${
                     newRole === r.v
                       ? "text-white"
-                      : "bg-foreground/5 text-foreground/60"
+                      : "bg-foreground/5 text-foreground/50"
                   }`}
                   style={
                     newRole === r.v
@@ -596,7 +560,7 @@ export default function ScheduleGrid({ locationId: defaultLoc, isOwner }: Schedu
             <button
               onClick={handleCreateShift}
               disabled={creating}
-              className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.97] disabled:opacity-40"
+              className="w-full rounded-lg py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.97] disabled:opacity-40"
               style={{ backgroundColor: "var(--brand-color)" }}
             >
               {creating ? "Đang tạo..." : "Tạo ca"}
