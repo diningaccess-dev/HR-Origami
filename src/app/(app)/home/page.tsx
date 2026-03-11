@@ -6,6 +6,7 @@ import QuickActions from "@/components/features/home/QuickActions";
 import AnnouncementList from "@/components/features/home/AnnouncementList";
 import PulseCheck from "@/components/features/home/PulseCheck";
 import OwnerDashboard from "@/components/features/home/OwnerDashboard";
+import NewsFeed from "@/components/features/home/NewsFeed";
 
 // Background surface theo quán
 const SCREEN_BG: Record<string, string> = {
@@ -111,7 +112,10 @@ export default async function HomePage() {
       {/* 2. Quick Actions */}
       <QuickActions role={role} locationId={locationId} />
 
-      {/* 3. Announcements */}
+      {/* 3. Newsfeed — Facebook-style feed */}
+      <NewsFeed locationId={locationId} role={role} />
+
+      {/* 4. Announcements */}
       <AnnouncementList
         announcements={announcements ?? []}
         locationId={locationId}
