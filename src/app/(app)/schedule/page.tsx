@@ -9,6 +9,7 @@ import WeekStrip from "@/components/features/schedule/WeekStrip";
 import ShiftCard from "@/components/features/schedule/ShiftCard";
 import type { ShiftData } from "@/components/features/schedule/ShiftCard";
 import NewShiftModal from "@/components/features/schedule/NewShiftModal";
+import ScheduleGrid from "@/components/features/schedule/ScheduleGrid";
 
 // Background surface theo quán
 const SCREEN_BG: Record<string, string> = {
@@ -30,6 +31,8 @@ export default function SchedulePage() {
   const [userId, setUserId] = useState("");
 
   const isManager = role === "manager" || role === "owner";
+  const isOwner = role === "owner";
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
   // ── Fetch profile lần đầu ────────────────────────────────
   useEffect(() => {
@@ -174,6 +177,44 @@ export default function SchedulePage() {
 
   const yearLabel = format(selectedDate, "yyyy");
 
+  // Owner/Manager default to grid view
+  useEffect(() => {
+    if (isManager) setViewMode("grid");
+  }, [isManager]);
+
+  // If grid mode, render completely different view
+  if (isManager && viewMode === "grid") {
+    return (
+      <div style={{ background: bgColor, minHeight: "100dvh" }}>
+        {/* Header */}
+        <div
+          className="flex items-center justify-between bg-white border-b border-black/5"
+          style={{ padding: "14px 18px 10px" }}
+        >
+          <h1
+            style={{
+              fontFamily: "Sora, sans-serif",
+              fontSize: 17,
+              fontWeight: 700,
+              color: "#1a1a1a",
+            }}
+          >
+            Lịch làm việc
+          </h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode("list")}
+              className="rounded-lg bg-foreground/5 px-2.5 py-1 text-[10px] font-semibold text-foreground/50 transition-all active:scale-95"
+            >
+              📋 List
+            </button>
+          </div>
+        </div>
+        <ScheduleGrid locationId={locationId} isOwner={isOwner} />
+      </div>
+    );
+  }
+
   return (
     <div style={{ background: bgColor, minHeight: "100dvh" }}>
       {/* ── Page header ────────────────────────────────────── */}
@@ -192,25 +233,35 @@ export default function SchedulePage() {
           Lịch làm việc
         </h1>
 
-        {isManager ? (
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-[10px] text-white"
-            style={{ background: "var(--brand-color)" }}
-          >
-            <Plus size={18} strokeWidth={2.5} />
-          </button>
-        ) : (
-          <span
-            style={{
-              fontSize: 11,
-              color: "#aaa",
-              fontWeight: 500,
-            }}
-          >
-            Tháng {format(selectedDate, "M")} · {yearLabel}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {isManager && (
+            <button
+              onClick={() => setViewMode("grid")}
+              className="rounded-lg bg-foreground/5 px-2.5 py-1 text-[10px] font-semibold text-foreground/50 transition-all active:scale-95"
+            >
+              📊 Grid
+            </button>
+          )}
+          {isManager ? (
+            <button
+              onClick={() => setModalOpen(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-[10px] text-white"
+              style={{ background: "var(--brand-color)" }}
+            >
+              <Plus size={18} strokeWidth={2.5} />
+            </button>
+          ) : (
+            <span
+              style={{
+                fontSize: 11,
+                color: "#aaa",
+                fontWeight: 500,
+              }}
+            >
+              Tháng {format(selectedDate, "M")} · {yearLabel}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── Week strip ─────────────────────────────────────── */}
