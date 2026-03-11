@@ -267,6 +267,12 @@ export default async function HrPage() {
           subtitle: "Chia tip cho nhân viên",
           href: "/finance/tip-pool",
         },
+        {
+          icon: "BookOpen",
+          title: "Sổ tay AI",
+          subtitle: "Nội dung cho trợ lý AI",
+          href: "/admin/handbook",
+        },
       ],
     });
   }
